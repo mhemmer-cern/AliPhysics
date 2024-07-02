@@ -20,6 +20,7 @@ add_definitions(-D_MODULE_="${MODULE}")
 # Module include folder
 include_directories(${AliPhysics_SOURCE_DIR}/RUN3
                     ${AliPhysics_SOURCE_DIR}/OADB
+                    ${AliPhysics_SOURCE_DIR}/PWGGA/GammaConvBase
 )
 
 # Additional include folders in alphabetical order except ROOT

@@ -84,7 +84,7 @@ ClassImp(AliV0ReaderV1)
 AliV0ReaderV1::AliV0ReaderV1(const char *name) : AliAnalysisTaskSE(name),
   kAddv0sInESDFilter(kFALSE),
   fPCMv0BitField(NULL),
-  fConversionCuts(NULL),
+  fConversionPhotonCuts(NULL),
   fEventCuts(NULL),
   fInputGammas(NULL),
   fConversionGammas(NULL),
@@ -213,7 +213,7 @@ AliConversionPhotonBase *AliV0ReaderV1::operator[](int index) const {
 /*
 //________________________________________________________________________
 AliV0ReaderV1::AliV0ReaderV1(AliV0ReaderV1 &original) : AliAnalysisTaskSE(original),
-fConversionCuts(NULL),
+fConversionPhotonCuts(NULL),
 fConversionGammas(NULL),
 fUseImprovedVertex(original.fUseImprovedVertex),
 fUseOwnXYZCalculation(original.fUseOwnXYZCalculation),
@@ -254,8 +254,8 @@ return *this;
 void AliV0ReaderV1::Init()
 {
   // Initialize function to be called once before analysis
-  if(fConversionCuts==NULL){
-    if(fConversionCuts==NULL)AliError("No Conversion Cut Selection initialized");
+  if(fConversionPhotonCuts==NULL){
+    if(fConversionPhotonCuts==NULL)AliError("No Conversion Cut Selection initialized");
   }
   if(fEventCuts==NULL){
     if(fEventCuts==NULL)AliError("No Event Cut Selection initialized");
@@ -289,9 +289,9 @@ void AliV0ReaderV1::UserCreateOutputObjects()
       fDeltaAODBranchName.Append("_");
       fDeltaAODBranchName.Append(fEventCuts->GetCutNumber());
     }
-    if(fConversionCuts){
+    if(fConversionPhotonCuts){
       fDeltaAODBranchName.Append("_");
-      fDeltaAODBranchName.Append(fConversionCuts->GetCutNumber());
+      fDeltaAODBranchName.Append(fConversionPhotonCuts->GetCutNumber());
       fDeltaAODBranchName.Append("_gamma");
     }
     fConversionGammas->SetName(fDeltaAODBranchName.Data());
@@ -308,7 +308,7 @@ void AliV0ReaderV1::UserCreateOutputObjects()
     if(fImpactParamHistograms==NULL){
       fImpactParamHistograms = new TList();
       fImpactParamHistograms->SetOwner(kTRUE);
-      fImpactParamHistograms->SetName(Form("ImpactParamHistograms_%s_%s",fEventCuts->GetCutNumber().Data(),fConversionCuts->GetCutNumber().Data()));
+      fImpactParamHistograms->SetName(Form("ImpactParamHistograms_%s_%s",fEventCuts->GetCutNumber().Data(),fConversionPhotonCuts->GetCutNumber().Data()));
     }
     fHistoPosTrackImpactParamZ = new TH1F("fHistoPosTrackImpactParamZ","",480,-80,80);
     fHistoPosTrackImpactParamZ->SetXTitle("Z (cm)");
@@ -433,7 +433,7 @@ void AliV0ReaderV1::UserCreateOutputObjects()
     if(fHistograms==NULL){
       fHistograms = new TList();
       fHistograms->SetOwner(kTRUE);
-      fHistograms->SetName(Form("V0FindingEfficiencyInput_%s_%s",fEventCuts->GetCutNumber().Data(),fConversionCuts->GetCutNumber().Data()));
+      fHistograms->SetName(Form("V0FindingEfficiencyInput_%s_%s",fEventCuts->GetCutNumber().Data(),fConversionPhotonCuts->GetCutNumber().Data()));
     }
 
     fHistoMCGammaPtvsR         = new TH2F("MCconvGamma_Pt_R","MC converted gamma Pt vs R (|eta| < 0.9)",250,0.0,25,400,0,200);
@@ -599,7 +599,7 @@ Bool_t AliV0ReaderV1::Notify(){
     return kTRUE;
   } else {
     printf(" Gamma Conversion Reader %s_%s :: Eta Shift Manually Set to %f \n\n",
-        (fEventCuts->GetCutNumber()).Data(),(fConversionCuts->GetCutNumber()).Data(),fEventCuts->GetEtaShift());
+        (fEventCuts->GetCutNumber()).Data(),(fConversionPhotonCuts->GetCutNumber()).Data(),fEventCuts->GetEtaShift());
     fEventCuts->DoEtaShift(kFALSE); // Eta Shift Set, make sure that it is called only once
   }
 
@@ -629,7 +629,7 @@ Int_t AliV0ReaderV1::GetSumSDDSSDClusters(AliVEvent *event){
 void AliV0ReaderV1::UserExec(Option_t *option){
   fSDDSSDClusters = -1;
 
-  if (!fConversionCuts->GetPIDResponse()) fConversionCuts->InitPIDResponse();
+  if (!fConversionPhotonCuts->GetPIDResponse()) fConversionPhotonCuts->InitPIDResponse();
 
   AliESDEvent * esdEvent = dynamic_cast<AliESDEvent*>(fInputEvent);
   if(esdEvent) {
@@ -650,7 +650,7 @@ void AliV0ReaderV1::UserExec(Option_t *option){
 //________________________________________________________________________
 Bool_t AliV0ReaderV1::ProcessEvent(AliVEvent *inputEvent,AliMCEvent *mcEvent)
 {
-  if (!fConversionCuts->GetPIDResponse()) fConversionCuts->InitPIDResponse();
+  if (!fConversionPhotonCuts->GetPIDResponse()) fConversionPhotonCuts->InitPIDResponse();
   //Reset the TClonesArray
   fConversionGammas->Delete();
 
@@ -665,7 +665,7 @@ Bool_t AliV0ReaderV1::ProcessEvent(AliVEvent *inputEvent,AliMCEvent *mcEvent)
     return kFALSE;
   }
   if(!fEventCuts){AliError("No EventCuts");return kFALSE;}
-  if(!fConversionCuts){AliError("No ConversionCuts");return kFALSE;}
+  if(!fConversionPhotonCuts){AliError("No ConversionCuts");return kFALSE;}
 
   // Count Primary Tracks Event
   CountTracks();
@@ -734,10 +734,10 @@ const AliExternalTrackParam *AliV0ReaderV1::GetExternalTrackParam(AliESDv0 *fCur
 
   if(!(charge==1||charge==-1)){AliError("Charge not defined");return 0x0;}
 
-  if(fConversionCuts->GetV0FinderSameSign()==1){
+  if(fConversionPhotonCuts->GetV0FinderSameSign()==1){
     if(fCurrentV0){
-      if((fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()!=(fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge())return 0x0;
-      if((fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()==(fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge()){
+      if((fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()!=(fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge())return 0x0;
+      if((fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()==(fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge()){
         if(charge==1){
           tracklabel=fCurrentV0->GetPindex();
           return fCurrentV0->GetParamP();
@@ -747,7 +747,7 @@ const AliExternalTrackParam *AliV0ReaderV1::GetExternalTrackParam(AliESDv0 *fCur
         }
       }
     }
-  }else if(fConversionCuts->GetV0FinderSameSign()==2){
+  }else if(fConversionPhotonCuts->GetV0FinderSameSign()==2){
     if(fCurrentV0){
         if(charge==1){
           tracklabel=fCurrentV0->GetPindex();
@@ -761,11 +761,11 @@ const AliExternalTrackParam *AliV0ReaderV1::GetExternalTrackParam(AliESDv0 *fCur
     // Check for sign flip
     if(fCurrentV0){
       if(!fCurrentV0->GetParamN()||!fCurrentV0->GetParamP())return 0x0;
-      if(!fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex())||!fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))return 0x0;
-      if((fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()==charge){
+      if(!fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex())||!fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))return 0x0;
+      if((fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetPindex()))->Charge()==charge){
         tracklabel=fCurrentV0->GetPindex();
         return fCurrentV0->GetParamP();}
-      if((fConversionCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge()==charge){
+      if((fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentV0->GetNindex()))->Charge()==charge){
         tracklabel=fCurrentV0->GetNindex();
         return fCurrentV0->GetParamN();}
     }
@@ -820,11 +820,11 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
 {
   //   cout << currentV0Index << endl;
   // Reconstruct conversion photon from ESD v0
-  fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonIn);
+  fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonIn);
 
   //checks if on the fly mode is set
-  if(!fConversionCuts->SelectV0Finder(fCurrentV0->GetOnFlyStatus())){
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kOnFly);
+  if(!fConversionPhotonCuts->SelectV0Finder(fCurrentV0->GetOnFlyStatus())){
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kOnFly);
     return 0x0;
   }
 
@@ -843,19 +843,19 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
 
   // Apply some Cuts before Reconstruction
 
-  AliVTrack * posTrack = fConversionCuts->GetTrack(fInputEvent,currentTrackLabels[0]);
-  AliVTrack * negTrack = fConversionCuts->GetTrack(fInputEvent,currentTrackLabels[1]);
+  AliVTrack * posTrack = fConversionPhotonCuts->GetTrack(fInputEvent,currentTrackLabels[0]);
+  AliVTrack * negTrack = fConversionPhotonCuts->GetTrack(fInputEvent,currentTrackLabels[1]);
   if(!negTrack || !posTrack) {
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kNoTracks);
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kNoTracks);
     return 0x0;
   }
   // Track Cuts
-  if(!fConversionCuts->TracksAreSelected(negTrack, posTrack)){
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kTrackCuts);
+  if(!fConversionPhotonCuts->TracksAreSelected(negTrack, posTrack)){
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kTrackCuts);
     return 0x0;
   }
 
-  fConversionCuts->FillV0EtaBeforedEdxCuts(fCurrentV0->Eta());
+  fConversionPhotonCuts->FillV0EtaBeforedEdxCuts(fCurrentV0->Eta());
 
   // Reconstruct Photon
   AliKFConversionPhoton *fCurrentMotherKF=NULL;
@@ -872,30 +872,28 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
   if(fUseConstructGamma){
     fCurrentMotherKF = new AliKFConversionPhoton();
     fCurrentMotherKF->ConstructGamma(fCurrentNegativeKFParticle,fCurrentPositiveKFParticle);
-  }else{
+  } else {
     fCurrentMotherKF = new AliKFConversionPhoton(fCurrentNegativeKFParticle,fCurrentPositiveKFParticle);
 
-
-#ifndef PWGGAUSEKFPARTICLE
-    fCurrentMotherKF->SetMassConstraint(0,0.0001);
-#else
-    //fCurrentMotherKF->SetMassConstraint(0,0.0001);
-    fCurrentMotherKF->SetNonlinearMassConstraint(0.);
-#endif // PWGGAUSEKFPARTICLE
-
+    #ifndef PWGGAUSEKFPARTICLE
+      fCurrentMotherKF->SetMassConstraint(0,0.0001);
+    #else
+      //fCurrentMotherKF->SetMassConstraint(0,0.0001);
+      fCurrentMotherKF->SetNonlinearMassConstraint(0.);
+    #endif // PWGGAUSEKFPARTICLE
   }
 
   // PID Cuts- positive track
-  if (!fConversionCuts->dEdxCuts(posTrack,fCurrentMotherKF)) {
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
+  if (!fConversionPhotonCuts->dEdxCuts(posTrack,fCurrentMotherKF)) {
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
     return 0x0;
   }
   // PID Cuts - negative track
-  if(!fConversionCuts->dEdxCuts(negTrack,fCurrentMotherKF)) {
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
+  if(!fConversionPhotonCuts->dEdxCuts(negTrack,fCurrentMotherKF)) {
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
     return 0x0;
   }
-  fConversionCuts->FillV0EtaAfterdEdxCuts(fCurrentV0->Eta());
+  fConversionPhotonCuts->FillV0EtaAfterdEdxCuts(fCurrentV0->Eta());
 
 
   // Set Track Labels
@@ -907,12 +905,12 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
   //Set MC Label
   if(fMCEvent){
 
-    Int_t labelp=TMath::Abs(fConversionCuts->GetTrack(fInputEvent,fCurrentMotherKF->GetTrackLabelPositive())->GetLabel());
-    Int_t labeln=TMath::Abs(fConversionCuts->GetTrack(fInputEvent,fCurrentMotherKF->GetTrackLabelNegative())->GetLabel());
+    Int_t labelp=TMath::Abs(fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentMotherKF->GetTrackLabelPositive())->GetLabel());
+    Int_t labeln=TMath::Abs(fConversionPhotonCuts->GetTrack(fInputEvent,fCurrentMotherKF->GetTrackLabelNegative())->GetLabel());
 
-//     cout << "rec: " <<  currentTrackLabels[0] << "\t" << currentTrackLabels[1] << endl;
-//     cout << "recProp: " <<  fCurrentMotherKF->GetTrackLabelPositive() << "\t" << fCurrentMotherKF->GetTrackLabelNegative() << endl;
-//     cout << "MC: " <<  labeln << "\t" << labelp << endl;
+    // cout << "rec: " <<  currentTrackLabels[0] << "\t" << currentTrackLabels[1] << endl;
+    // cout << "recProp: " <<  fCurrentMotherKF->GetTrackLabelPositive() << "\t" << fCurrentMotherKF->GetTrackLabelNegative() << endl;
+    // cout << "MC: " <<  labeln << "\t" << labelp << endl;
 
     AliMCParticle *fNegativeMCParticle = 0x0;
     if(labeln>-1)  fNegativeMCParticle = (AliMCParticle*) fMCEvent->GetTrack(labeln);
@@ -929,9 +927,9 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
   // cout << currentV0Index <<" \t before: \t" << fCurrentMotherKF->GetPx() << "\t" << fCurrentMotherKF->GetPy() << "\t" << fCurrentMotherKF->GetPz()  << endl;
   if(fUseImprovedVertex == kTRUE){
     AliGAKFVertex primaryVertexImproved(*fInputEvent->GetPrimaryVertex());
-    //    cout << "Prim Vtx: " << primaryVertexImproved.GetX() << "\t" << primaryVertexImproved.GetY() << "\t" << primaryVertexImproved.GetZ() << endl;
+    // cout << "Prim Vtx: " << primaryVertexImproved.GetX() << "\t" << primaryVertexImproved.GetY() << "\t" << primaryVertexImproved.GetZ() << endl;
     primaryVertexImproved+=*fCurrentMotherKF;
-    //    cout << "Prim Vtx after: " << primaryVertexImproved.GetX() << "\t" << primaryVertexImproved.GetY() << "\t" << primaryVertexImproved.GetZ() << endl;
+    // cout << "Prim Vtx after: " << primaryVertexImproved.GetX() << "\t" << primaryVertexImproved.GetY() << "\t" << primaryVertexImproved.GetZ() << endl;
     fCurrentMotherKF->SetProductionVertex(primaryVertexImproved);
     // cout << currentV0Index <<" \t after: \t" << fCurrentMotherKF->GetPx() << "\t" << fCurrentMotherKF->GetPy() << "\t" << fCurrentMotherKF->GetPz()  << endl;
   }
@@ -947,7 +945,7 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
   if(fUseOwnXYZCalculation){
     //    Double_t convpos[3]={0,0,0};
     if(!GetConversionPoint(fCurrentExternalTrackParamPositive,fCurrentExternalTrackParamNegative,convpos,dca)){
-      fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kConvPointFail);
+      fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kConvPointFail);
       delete fCurrentMotherKF;
       fCurrentMotherKF=NULL;
       return 0x0;
@@ -972,37 +970,37 @@ AliKFConversionPhoton *AliV0ReaderV1::ReconstructV0(AliESDv0 *fCurrentV0,Int_t c
   fCurrentMotherKF->SetMass(fCurrentMotherKF->M());
 
   // Calculating invariant mass
-#ifndef PWGGAUSEKFPARTICLE
-  Double_t mass=-99.0, mass_width=-99.0, Pt=-99.0, Pt_width=-99.0;
-#else
-  float mass=-99.0, mass_width=-99.0, Pt=-99.0, Pt_width=-99.0;
-#endif // PWGGAUSEKFPARTICLE
+  #ifndef PWGGAUSEKFPARTICLE
+    Double_t mass=-99.0, mass_width=-99.0, Pt=-99.0, Pt_width=-99.0;
+  #else
+    float mass=-99.0, mass_width=-99.0, Pt=-99.0, Pt_width=-99.0;
+  #endif // PWGGAUSEKFPARTICLE
   AliGAKFParticle fCurrentMotherKFForMass(fCurrentNegativeKFParticle,fCurrentPositiveKFParticle);
   fCurrentMotherKFForMass.GetMass(mass,mass_width);
   fCurrentMotherKFForMass.GetPt(Pt,Pt_width);
   fCurrentInvMassPair=mass;
 
   // apply possible Kappa cut
-  if (!fConversionCuts->KappaCuts(fCurrentMotherKF,fInputEvent)){
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
+  if (!fConversionPhotonCuts->KappaCuts(fCurrentMotherKF,fInputEvent)){
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kdEdxCuts);
     delete fCurrentMotherKF;
     fCurrentMotherKF=NULL;
     return 0x0;
   }
 
   // Apply Photon Cuts
-  if(!fConversionCuts->PhotonCuts(fCurrentMotherKF,fInputEvent)){
-    fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonCuts);
+  if(!fConversionPhotonCuts->PhotonCuts(fCurrentMotherKF,fInputEvent)){
+    fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonCuts);
     delete fCurrentMotherKF;
     fCurrentMotherKF=NULL;
     return 0x0;
   }
 
-  //    cout << currentV0Index <<" \t after: \t" <<fCurrentMotherKF->GetPx() << "\t" << fCurrentMotherKF->GetPy() << "\t" << fCurrentMotherKF->GetPz()  << endl;
+  // cout << currentV0Index <<" \t after: \t" <<fCurrentMotherKF->GetPx() << "\t" << fCurrentMotherKF->GetPy() << "\t" << fCurrentMotherKF->GetPz()  << endl;
 
   if(fProduceImpactParamHistograms) FillImpactParamHistograms(posTrack, negTrack, fCurrentV0, fCurrentMotherKF);
 
-  fConversionCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonOut);
+  fConversionPhotonCuts->FillPhotonCutIndex(AliConversionPhotonCuts::kPhotonOut);
   return fCurrentMotherKF;
 }
 
@@ -1312,7 +1310,7 @@ Bool_t AliV0ReaderV1::GetAODConversionGammas(){
     }
     if(fRelabelAODs){
       relabelingWorkedForAll &= RelabelAODPhotonCandidates(gamma);}
-    if(fConversionCuts->PhotonIsSelected(gamma,fInputEvent)){
+    if(fConversionPhotonCuts->PhotonIsSelected(gamma,fInputEvent)){
       new((*fConversionGammas)[fConversionGammas->GetEntriesFast()]) AliAODConversionPhoton(*gamma);}
   }
   if(!relabelingWorkedForAll){
@@ -1912,13 +1910,13 @@ void AliV0ReaderV1::FillRecMCHistosForV0FinderEffiESD( AliESDv0* currentV0){
   Double_t mcProdVtxX   = primVtxMC->GetX();
   Double_t mcProdVtxY   = primVtxMC->GetY();
   Double_t mcProdVtxZ   = primVtxMC->GetZ();
-//   cout << mcProdVtxX <<"\t" << mcProdVtxY << "\t" << mcProdVtxZ << endl;
+  // cout << mcProdVtxX <<"\t" << mcProdVtxY << "\t" << mcProdVtxZ << endl;
 
   Int_t tracklabelPos=currentV0->GetPindex();
   Int_t tracklabelNeg=currentV0->GetNindex();
 
-  Int_t labelp=TMath::Abs(fConversionCuts->GetTrack(fInputEvent,tracklabelPos)->GetLabel());
-  Int_t labeln=TMath::Abs(fConversionCuts->GetTrack(fInputEvent,tracklabelNeg)->GetLabel());
+  Int_t labelp=TMath::Abs(fConversionPhotonCuts->GetTrack(fInputEvent,tracklabelPos)->GetLabel());
+  Int_t labeln=TMath::Abs(fConversionPhotonCuts->GetTrack(fInputEvent,tracklabelNeg)->GetLabel());
 
   AliMCParticle* negPart = 0x0;
   if(labeln>-1) negPart = (AliMCParticle *)fMCEvent->GetTrack(labeln);
@@ -1926,12 +1924,12 @@ void AliV0ReaderV1::FillRecMCHistosForV0FinderEffiESD( AliESDv0* currentV0){
   if(labelp>-1) posPart = (AliMCParticle *)fMCEvent->GetTrack(labelp);
 
   if ( negPart == NULL || posPart == NULL ) return;
-//   if (!(negPart->GetPdgCode() == 11)) return;
-//   if (!(posPart->GetPdgCode() == -11)) return;
+  // if (!(negPart->PdgCode() == 11)) return;
+  // if (!(posPart->PdgCode() == -11)) return;
   Long_t motherlabelNeg = negPart->GetMother();
   Long_t motherlabelPos = posPart->GetMother();
 
-//   cout << "mother neg " << motherlabelNeg << " mother pos " << motherlabelPos << endl;
+  // cout << "mother neg " << motherlabelNeg << " mother pos " << motherlabelPos << endl;
   if (motherlabelNeg>-1 && motherlabelNeg == motherlabelPos && negPart->GetMother() != -1){
     if (fEventCuts->IsConversionPrimaryESD( fMCEvent, negPart->GetMother(), mcProdVtxX, mcProdVtxY, mcProdVtxZ)){
 
@@ -1948,7 +1946,7 @@ void AliV0ReaderV1::FillRecMCHistosForV0FinderEffiESD( AliESDv0* currentV0){
             fHistoRecMCGammaRvsEta->Fill(negPart->Particle()->R(),mother->Eta());
             fHistoRecMCGammaPhivsEta->Fill(mother->Phi(),mother->Eta());
           }
-//           cout << "new gamma found" << endl;
+          cout << "new gamma found" << endl;
         } else {
           if (ParticleIsConvertedPhoton(fMCEvent, mother, 0.9, 180.,250. )){
             fHistoRecMCGammaMultiPt->Fill(mother->Pt());
@@ -1958,10 +1956,10 @@ void AliV0ReaderV1::FillRecMCHistosForV0FinderEffiESD( AliESDv0* currentV0){
           if (ParticleIsConvertedPhoton(fMCEvent, mother, 1.4, 180.,250. )){
             fHistoRecMCGammaMultiPtvsEta->Fill(mother->Pt(),mother->Eta());
           }
-//           cout << "this one I had already: " << motherlabelNeg << endl << "-----------------------"  << endl;
+          // cout << "this one I had already: " << motherlabelNeg << endl << "-----------------------"  << endl;
         }
-//         cout << "event gammas: " << endl;
-//        for(Int_t iGamma=0; iGamma<fVectorFoundGammas.size(); iGamma++){cout << fVectorFoundGammas.at(iGamma) << ", ";}
+        // cout << "event gammas: " << endl;
+        // for(Int_t iGamma=0; iGamma<fVectorFoundGammas.size(); iGamma++){cout << fVectorFoundGammas.at(iGamma) << ", ";}
       }
     }
   }

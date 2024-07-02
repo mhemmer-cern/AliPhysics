@@ -99,28 +99,29 @@ const TString AliAnalysisTaskAO2Dconverter::TreeName[kTrees] = {
   "DbgEventExtra",
   "O2track",
   "O2trackcov",
-  "O2trackextra",
+  "O2trackextra_001", // 001 only changed expression column
   "O2fwdtrack",
   "O2fwdtrackcov",
   "O2calo",
   "O2calotrigger",
-  "O2zdc",
+  "O2zdc_001", // changed to std::vector format with lots of dynamic columns
   "O2fv0a",
   "O2fv0c",
   "O2ft0",
   "O2fdd_001",
-  "O2v0_001",
+  "O2v0_002", // 002 added the V0Type (standard or photon) TODO
+  "O2V0OTF", // ont he fly V0s for photon conversions
   "O2cascade_001",
   "O2tof",
   "O2mcparticle_001",
   "O2mccollision",
   "O2mctracklabel",
-  "O2mccalolabel",
+  "O2mccalolabel_001", // changed the mask column to std::vector for the amplitude fraction  
   "O2mccollisionlabel",
   "O2bc",
   "O2run2bcinfo",
   "O2origin",
-  "O2hmpid",
+  "O2hmpid_001", // now stores the position of the exrapolated track and HPID cluster, cluster size, track 
   "O2hf2prong",
   "O2hf3prong",
   "O2hfcascade",
@@ -146,6 +147,7 @@ const TString AliAnalysisTaskAO2Dconverter::TreeTitle[kTrees] = {
   "FT0",
   "FDD",
   "V0s",
+  "V0sOTF",
   "Cascades",
   "TOF hits",
   "Kinematics",
@@ -230,6 +232,8 @@ AliAnalysisTaskAO2Dconverter::AliAnalysisTaskAO2Dconverter(const char* name)
     fTrackFilter(Form("AO2Dconverter%s", name), Form("fTrackFilter%s", name)),
     fEventCuts(),
     fTriggerAnalysis(),
+    fInputGammas(NULL),
+    fConversionGammas(NULL),
     collision(),
     eventextra(),
     bc(),
@@ -257,6 +261,7 @@ AliAnalysisTaskAO2Dconverter::AliAnalysisTaskAO2Dconverter(const char* name)
     ft0(),
     fdd(),
     v0s(),
+    v0sOTF(),
     cascs(),
     hf2Prong(),
     hf3Prong(),
@@ -283,14 +288,23 @@ AliAnalysisTaskAO2Dconverter::~AliAnalysisTaskAO2Dconverter()
 } // AliAnalysisTaskAO2Dconverter::~AliAnalysisTaskAO2Dconverter()
 
 void AliAnalysisTaskAO2Dconverter::NotifyRun(){
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   const char* oadbfilename = Form("%s/COMMON/PHYSICSSELECTION/data/physicsSelection.root", AliAnalysisManager::GetOADBPath());
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   TFile* oadb = TFile::Open(oadbfilename);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if(!oadb->IsOpen()) AliFatal(Form("Cannot open OADB file %s", oadbfilename));
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   AliOADBContainer* triggerContainer = (AliOADBContainer*) oadb->Get("trigAnalysis");
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (!triggerContainer) AliFatal("Cannot fetch OADB container for trigger analysis");
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   AliOADBTriggerAnalysis* oadbTriggerAnalysis = (AliOADBTriggerAnalysis*) triggerContainer->GetObject(fCurrentRunNumber, "Default");
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fTriggerAnalysis.SetParameters(oadbTriggerAnalysis);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fTriggerAnalysis.ApplyPileupCuts(kTRUE);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   //read PHOS trigger bad map
   if (fUsePHOSBadMap){
     AliOADBContainer phosBadmapContainer(Form("phosTriggerBadMap"));
@@ -311,19 +325,43 @@ void AliAnalysisTaskAO2Dconverter::NotifyRun(){
     }
   }
   AliCDBManager *cdb = AliCDBManager::Instance();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if(cdb->IsDefaultStorageSet() && cdb->GetRun() > 0) {
+    std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
     // CDB manage initialized
     // Get GRP
     AliCDBEntry *en = cdb->Get("GRP/GRP/Data");
+    std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
     if(en) {
       fGRP = static_cast<AliGRPObject *>(en->GetObject());
     }
+    std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
+}
+
+//________________________________________________________________________
+void AliAnalysisTaskAO2Dconverter::Init()
+{
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
+  // Initialize function to be called once before analysis
+  if(fConversionGammas != NULL){
+    delete fConversionGammas;
+    fConversionGammas=NULL;
+  }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
+
+  if(fConversionGammas == NULL){
+    fConversionGammas = new TClonesArray("AliAODConversionPhoton",100);
+  }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
+  fConversionGammas->Delete();//Reset the TClonesArray
 }
 
 
 void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // Setting active/inactive containers based on the TaskMode
   switch (fTaskMode)
   {
@@ -340,6 +378,7 @@ void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
   default:
     break;
   }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   // Set the truncation
   if (fTruncate)
@@ -384,6 +423,7 @@ void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
     mADAmplitude = 0xFFFFF000; // 11 bits
     mT0Amplitude = 0xFFFFF000; // 11 bits
   }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   // create output objects
   OpenFile(1); // Here we have the histograms
@@ -402,13 +442,17 @@ void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
   /// algorithm = 4 : LZ4  compression algorithm is used
   /// algorithm = 5 : ZSTD compression algorithm is used
   /// So fCompress = 409 is LZ4 algorithm level 9
-
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputFile = TFile::Open("AO2D.root", "RECREATE", "O2 AOD", fCompress); // File to store the trees of time frames
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputFile->Print();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   // create the list of output histograms
   fOutputList = new TList();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputList->SetOwner();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   // Add centrality histogram
   fCentralityHist = new TH1F("centrality", TString::Format("Centrality %s", fCentralityMethod.Data()),
@@ -417,16 +461,23 @@ void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
                              100, 0.0, 100.0);
   fHistPileupEvents = new TH1I("puEvents", "Pileup events", 2, 0, 2);
   fHistPileupEvents->SetStats(0);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   fOutputList->Add(fCentralityHist);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputList->Add(fCentralityINT7);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputList->Add(fHistPileupEvents);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (fSkipTPCPileup || fSkipPileup || fUseEventCuts)
     fEventCuts.AddQAplotsToList(fOutputList);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (fSkipTPCPileup)
     fEventCuts.SetRejectTPCPileupWithITSTPCnCluCorr(true);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   PostData(1, fOutputList);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   if (!fStoreHF) {
     DisableTree(kHF2Prong);
@@ -434,21 +485,27 @@ void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
     DisableTree(kHFCascade);
     DisableTree(kHFDStar);
   }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 } // void AliAnalysisTaskAO2Dconverter::UserCreateOutputObjects()
 
 void AliAnalysisTaskAO2Dconverter::UserExec(Option_t *)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // Initialisation
 
   const char *kPileupRejType[2] = {"PU_rej", "PU_TPC_rej"};
 
   fVEvent = InputEvent();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fESD = dynamic_cast<AliESDEvent *>(fVEvent);
   fAOD = dynamic_cast<AliAODEvent *>(fVEvent);
   if (!fESD && !fAOD)
   {
     ::Fatal("AliAnalysisTaskAO2Dconverter::UserExec", "Something is wrong with the event handler");
   }
+
+  // Check if correctly initialized
+  if(!fConversionGammas)Init();
 
   // populate meta data only once
   if (fMetaData.GetEntries() == 0) {
@@ -591,10 +648,14 @@ void AliAnalysisTaskAO2Dconverter::UserExec(Option_t *)
 
 void AliAnalysisTaskAO2Dconverter::FinishTaskOutput()
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // called at the end of the event loop on the worker
   FinishTF();
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   fOutputFile->Write(); // Do not close the file since this is then re-opened and overwritten by the framework
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   AliInfo(Form("Total size of output trees: %lu bytes\n", fBytes));
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
 
   // write meta data
   fOutputFile->WriteObject(&fMetaData, "metaData");
@@ -607,6 +668,7 @@ void AliAnalysisTaskAO2Dconverter::Terminate(Option_t *)
 
 AliAnalysisTaskAO2Dconverter *AliAnalysisTaskAO2Dconverter::AddTask(TString suffix)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   AliAnalysisManager *mgr = AliAnalysisManager::GetAnalysisManager();
   if (!mgr)
   {
@@ -628,13 +690,31 @@ AliAnalysisTaskAO2Dconverter *AliAnalysisTaskAO2Dconverter::AddTask(TString suff
   if (!task)
     return nullptr;
   // add your task to the manager
+  // we need to add the input event handler to give the taskmanager the AliAODGammaConversion.root files to read as input
+  if(task->GetFileType() == 1){
+      AliAODInputHandler* aodH                = new AliAODInputHandler();
+      aodH->AddFriend((char*)"AliAODGammaConversion.root");
+      mgr->SetInputEventHandler(aodH);
+  } else if(task->GetFileType() == 0){
+      AliESDInputHandler* esdH                = new AliESDInputHandler();
+      esdH->SetFriendFileName((char*)"AliAODGammaConversion.root");
+      mgr->SetInputEventHandler(esdH);
+  } else {
+    std::cout << "FATAL: FileType does not exist!" << std::endl;
+  }
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   mgr->AddTask(task);
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
+
   // your task needs input: here we connect the manager to your task
   mgr->ConnectInput(task, 0, mgr->GetCommonInputContainer());
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // same for the output
   mgr->ConnectOutput(task, 1, mgr->CreateContainer("QAlist", TList::Class(), AliAnalysisManager::kOutputContainer, fileName.Data()));
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // we need to register an unconnected output container to register the output file in the lego system
   mgr->CreateContainer("AO2D", TTree::Class(), AliAnalysisManager::kOutputContainer, "AO2D.root");
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // for (Int_t i = 0; i < kTrees; i++)
   //   mgr->ConnectOutput(task, 2 + i, mgr->CreateContainer(TreeName[i], TTree::Class(), AliAnalysisManager::kOutputContainer, fileName.Data()));
   // in the end, this macro returns a pointer to your task. this will be convenient later on
@@ -646,6 +726,7 @@ AliAnalysisTaskAO2Dconverter *AliAnalysisTaskAO2Dconverter::AddTask(TString suff
 ////////////////////////////////////////////////////////////
 TTree *AliAnalysisTaskAO2Dconverter::CreateTree(TreeIndex t)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (!fTreeStatus[t])
     return 0x0;
   // Create the tree in the corresponding (TF) directory
@@ -660,6 +741,7 @@ TTree *AliAnalysisTaskAO2Dconverter::CreateTree(TreeIndex t)
 
 void AliAnalysisTaskAO2Dconverter::Prune()
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (fPruneList.IsNull() || fPruneList.IsWhitespace())
     return;
   TObjArray *arr = fPruneList.Tokenize(" ");
@@ -688,6 +770,7 @@ void AliAnalysisTaskAO2Dconverter::Prune()
 
 void AliAnalysisTaskAO2Dconverter::FillTree(TreeIndex t)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (!fTreeStatus[t])
     return;
   Int_t nbytes = fTree[t]->Fill();
@@ -697,6 +780,7 @@ void AliAnalysisTaskAO2Dconverter::FillTree(TreeIndex t)
 
 void AliAnalysisTaskAO2Dconverter::WriteTree(TreeIndex t)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   if (!fTreeStatus[t])
     return;
   // Write the tree in the corrsponding (TF) directory
@@ -709,6 +793,7 @@ void AliAnalysisTaskAO2Dconverter::WriteTree(TreeIndex t)
 
 void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   Printf("Initializing TF %lld", tfId);
 
   // Reset the event count
@@ -946,22 +1031,27 @@ void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
   if (fTreeStatus[kZdc])
   {
     tZdc->Branch("fIndexBCs", &zdc.fIndexBCs, "fIndexBCs/I");
-    tZdc->Branch("fEnergyZEM1", &zdc.fEnergyZEM1, "fEnergyZEM1/F");
-    tZdc->Branch("fEnergyZEM2", &zdc.fEnergyZEM2, "fEnergyZEM2/F");
-    tZdc->Branch("fEnergyCommonZNA", &zdc.fEnergyCommonZNA, "fEnergyCommonZNA/F");
-    tZdc->Branch("fEnergyCommonZNC", &zdc.fEnergyCommonZNC, "fEnergyCommonZNC/F");
-    tZdc->Branch("fEnergyCommonZPA", &zdc.fEnergyCommonZPA, "fEnergyCommonZPA/F");
-    tZdc->Branch("fEnergyCommonZPC", &zdc.fEnergyCommonZPC, "fEnergyCommonZPC/F");
-    tZdc->Branch("fEnergySectorZNA", &zdc.fEnergySectorZNA, "fEnergySectorZNA[4]/F");
-    tZdc->Branch("fEnergySectorZNC", &zdc.fEnergySectorZNC, "fEnergySectorZNC[4]/F");
-    tZdc->Branch("fEnergySectorZPA", &zdc.fEnergySectorZPA, "fEnergySectorZPA[4]/F");
-    tZdc->Branch("fEnergySectorZPC", &zdc.fEnergySectorZPC, "fEnergySectorZPC[4]/F");
-    tZdc->Branch("fTimeZEM1", &zdc.fTimeZEM1, "fTimeZEM1/F");
-    tZdc->Branch("fTimeZEM2", &zdc.fTimeZEM2, "fTimeZEM2/F");
-    tZdc->Branch("fTimeZNA", &zdc.fTimeZNA, "fTimeZNA/F");
-    tZdc->Branch("fTimeZNC", &zdc.fTimeZNC, "fTimeZNC/F");
-    tZdc->Branch("fTimeZPA", &zdc.fTimeZPA, "fTimeZPA/F");
-    tZdc->Branch("fTimeZPC", &zdc.fTimeZPC, "fTimeZPC/F");
+    tZdc->Branch("fEnergy", &zdc.fEnergy);
+    tZdc->Branch("fChannelE", &zdc.fChannelE);
+    tZdc->Branch("fAmplitude", &zdc.fAmplitude);
+    tZdc->Branch("fTime", &zdc.fTime);
+    tZdc->Branch("fChannelT", &zdc.fChannelT);
+    // tZdc->Branch("fEnergyZEM1", &zdc.fEnergyZEM1, "fEnergyZEM1/F");
+    // tZdc->Branch("fEnergyZEM2", &zdc.fEnergyZEM2, "fEnergyZEM2/F");
+    // tZdc->Branch("fEnergyCommonZNA", &zdc.fEnergyCommonZNA, "fEnergyCommonZNA/F");
+    // tZdc->Branch("fEnergyCommonZNC", &zdc.fEnergyCommonZNC, "fEnergyCommonZNC/F");
+    // tZdc->Branch("fEnergyCommonZPA", &zdc.fEnergyCommonZPA, "fEnergyCommonZPA/F");
+    // tZdc->Branch("fEnergyCommonZPC", &zdc.fEnergyCommonZPC, "fEnergyCommonZPC/F");
+    // tZdc->Branch("fEnergySectorZNA", &zdc.fEnergySectorZNA, "fEnergySectorZNA[4]/F");
+    // tZdc->Branch("fEnergySectorZNC", &zdc.fEnergySectorZNC, "fEnergySectorZNC[4]/F");
+    // tZdc->Branch("fEnergySectorZPA", &zdc.fEnergySectorZPA, "fEnergySectorZPA[4]/F");
+    // tZdc->Branch("fEnergySectorZPC", &zdc.fEnergySectorZPC, "fEnergySectorZPC[4]/F");
+    // tZdc->Branch("fTimeZEM1", &zdc.fTimeZEM1, "fTimeZEM1/F");
+    // tZdc->Branch("fTimeZEM2", &zdc.fTimeZEM2, "fTimeZEM2/F");
+    // tZdc->Branch("fTimeZNA", &zdc.fTimeZNA, "fTimeZNA/F");
+    // tZdc->Branch("fTimeZNC", &zdc.fTimeZNC, "fTimeZNC/F");
+    // tZdc->Branch("fTimeZPA", &zdc.fTimeZPA, "fTimeZPA/F");
+    // tZdc->Branch("fTimeZPC", &zdc.fTimeZPC, "fTimeZPC/F");
     tZdc->SetBasketSize("*", fBasketSizeEvents);
   }
 
@@ -1031,7 +1121,32 @@ void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
     tV0s->Branch("fIndexCollisions", &v0s.fIndexCollisions, "fIndexCollisions/I");
     tV0s->Branch("fIndexTracks_Pos", &v0s.fIndexTracksPos, "fIndexTracks_Pos/I");
     tV0s->Branch("fIndexTracks_Neg", &v0s.fIndexTracksNeg, "fIndexTracks_Neg/I");
+    tV0s->Branch("fV0Type", &v0s.fV0Type, "fV0Type/b");
     tV0s->SetBasketSize("*", fBasketSizeTracks);
+  }
+
+  // Associuate branches for V0sOTF
+  TTree *tV0sOTF = CreateTree(kV0sOTF);
+  if (fTreeStatus[kV0sOTF])
+  {
+    tV0sOTF->Branch("fIndexCollisions", &v0sOTF.fIndexCollisions, "fIndexCollisions/I");
+    tV0sOTF->Branch("fIndexTracks_Pos", &v0sOTF.fIndexTracksPos, "fIndexTracks_Pos/I");
+    tV0sOTF->Branch("fIndexTracks_Neg", &v0sOTF.fIndexTracksNeg, "fIndexTracks_Neg/I");
+    tV0sOTF->Branch("fPx", &v0sOTF.fPx, "fPx/F");
+    tV0sOTF->Branch("fPy", &v0sOTF.fPy, "fPy/F");
+    tV0sOTF->Branch("fPz", &v0sOTF.fPz, "fPz/F");
+    tV0sOTF->Branch("fE", &v0sOTF.fEnergy, "fE/F");
+    tV0sOTF->Branch("fQt", &v0sOTF.fQt, "fQt/F");
+    tV0sOTF->Branch("fAlpha", &v0sOTF.fAlpha, "fAlpha/F");
+    tV0sOTF->Branch("fCx", &v0sOTF.fCx, "fCx/F");
+    tV0sOTF->Branch("fCy", &v0sOTF.fCy, "fCy/F");
+    tV0sOTF->Branch("fCz", &v0sOTF.fCz, "fCz/F");
+    tV0sOTF->Branch("fChi2NDF", &v0sOTF.fChi2NDF, "fChi2NDF/F");
+    tV0sOTF->Branch("fPsiPair", &v0sOTF.fPsiPair, "fPsiPair/F");
+    tV0sOTF->Branch("fV0Type", &v0sOTF.fV0Type, "fV0Type/b");
+    tV0sOTF->Branch("fQuality", &v0sOTF.fQuality, "fQuality/b");
+    tV0sOTF->Branch("fTagged", &v0sOTF.fTagged, "fTagged/O");
+    tV0sOTF->SetBasketSize("*", fBasketSizeTracks);
   }
 
   // Associuate branches for cascades
@@ -1065,9 +1180,16 @@ void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
   if (fTreeStatus[kHMPID]) {
     tHMPID->Branch("fIndexTracks", &hmpids.fIndexTracks, "fIndexTracks/I");
     tHMPID->Branch("fHMPIDSignal", &hmpids.fHMPIDSignal, "fHMPIDSignal/F");
-    tHMPID->Branch("fHMPIDDistance", &hmpids.fHMPIDDistance, "fHMPIDDistance/F");
+    tHMPID->Branch("fHMPIDXTrack", &hmpids.fHMPIDXTrack, "fHMPIDXTrack/F");
+    tHMPID->Branch("fHMPIDYTrack", &hmpids.fHMPIDYTrack, "fHMPIDYTrack/F");
+    tHMPID->Branch("fHMPIDXMip", &hmpids.fHMPIDXMip, "fHMPIDXMip/F");
+    tHMPID->Branch("fHMPIDYMip", &hmpids.fHMPIDYMip, "fHMPIDYMip/F");
     tHMPID->Branch("fHMPIDNPhotons", &hmpids.fHMPIDNPhotons, "fHMPIDNPhotons/S");
     tHMPID->Branch("fHMPIDQMip", &hmpids.fHMPIDQMip, "fHMPIDQMip/S");
+    tHMPID->Branch("fHMPIDClusSize", &hmpids.fHMPIDClusSize, "fHMPIDClusSize/S");
+    tHMPID->Branch("fHMPIDMom", &hmpids.fHMPIDMom, "fHMPIDMom/F");
+    tHMPID->Branch("fHMPIDPhotsCharge", &hmpids.fHMPIDPhotsCharge, "fHMPIDPhotsCharge[10]/F");
+    // tHMPID->Branch("fHMPIDDistance", &hmpids.fHMPIDDistance, "fHMPIDDistance/F");
     tHMPID->SetBasketSize("*", fBasketSizeTracks);
   }
 
@@ -1127,14 +1249,14 @@ void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
     TTree *tCaloLabels = CreateTree(kMcCaloLabel);
     if (fTreeStatus[kMcCaloLabel])
     {
-      tCaloLabels->Branch("fIndexMcParticles", &mccalolabel.fIndexMcParticles, "fIndexMcParticles/I");
-      tCaloLabels->Branch("fMcMask", &mccalolabel.fMcMask, "fMcMask/s");
+      tCaloLabels->Branch("fIndexMcParticles", &mccalolabel.fIndexMcParticles, "fIndexMcParticles/I"); // TODO Vector!!!!
+      tCaloLabels->Branch("fAmplitudeFraction", &mccalolabel.fAmplitudeFraction);
       tCaloLabels->SetBasketSize("*", fBasketSizeEvents);
     }
 
-    // MC labels of each reconstructed calo cluster
+    // MC labels for reconstructed collisions
     TTree *tCollisionLabels = CreateTree(kMcCollisionLabel);
-    if (fTreeStatus[kMcCaloLabel])
+    if (fTreeStatus[kMcCollisionLabel])
     {
       tCollisionLabels->Branch("fIndexMcCollisions", &mccollisionlabel.fIndexMcCollisions, "fIndexMcCollisions/I");
       tCollisionLabels->Branch("fMcMask", &mccollisionlabel.fMcMask, "fMcMask/s");
@@ -1244,6 +1366,7 @@ void AliAnalysisTaskAO2Dconverter::InitTF(ULong64_t tfId)
 
 void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // Configuration of the PID response
   AliPIDResponse *PIDResponse = (AliPIDResponse *)((AliInputEventHandler *)(AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler()))->GetPIDResponse();
   if (!PIDResponse) {
@@ -1495,7 +1618,7 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 	  Error("UserExec", "Could not receive MC track %d", it);
 	  continue;
         }
-	if (mcAODTrack->IsPrimary()) nMCprim++;
+	  if (mcAODTrack->IsPrimary()) nMCprim++;
       }
     }
 
@@ -1506,9 +1629,9 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 
       for (Int_t itrack = 0; itrack < ntracks; ++itrack)
       {
-	AliVTrack *track = dynamic_cast<AliVTrack*>(fVEvent->GetTrack(itrack));
-	Int_t alabel = track->GetLabel();
-	toWrite[TMath::Abs(alabel)] = 1;
+        AliVTrack *track = dynamic_cast<AliVTrack*>(fVEvent->GetTrack(itrack));
+        Int_t alabel = track->GetLabel();
+        toWrite[TMath::Abs(alabel)] = 1;
       }
 
       // For each calo cluster keep the corresponding MC particle
@@ -1516,26 +1639,26 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
       Short_t nEmcalCells = emcalCells->GetNumberOfCells();
       for (Short_t ice = 0; ice < nEmcalCells; ++ice)
       {
-	Short_t cellNumber;
-	Double_t amplitude;
-	Double_t time;
-	Int_t mclabel;
-	Double_t efrac;
+        Short_t cellNumber;
+        Double_t amplitude;
+        Double_t time;
+        Int_t mclabel;
+        Double_t efrac;
 
-	emcalCells->GetCell(ice, cellNumber, amplitude, time, mclabel, efrac);
-	toWrite[TMath::Abs(mclabel)] = 1;
+        emcalCells->GetCell(ice, cellNumber, amplitude, time, mclabel, efrac);
+        toWrite[TMath::Abs(mclabel)] = 1;
       }
       AliVCaloCells *phosCells = fVEvent->GetPHOSCells();
       Short_t nPhosCells = phosCells->GetNumberOfCells();
       for (Short_t ice = 0; ice < nPhosCells; ++ice)
       {
-	Short_t cellNumber;
-	Double_t amplitude;
-	Double_t time;
-	Int_t mclabel;
-	Double_t efrac;
+        Short_t cellNumber;
+        Double_t amplitude;
+        Double_t time;
+        Int_t mclabel;
+        Double_t efrac;
 
-	phosCells->GetCell(ice, cellNumber, amplitude, time, mclabel, efrac);
+        phosCells->GetCell(ice, cellNumber, amplitude, time, mclabel, efrac);
         if(mclabel>=0) //label -1 means no primary
           toWrite[mclabel] = 1;
       }
@@ -1546,8 +1669,8 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 
       for (Int_t itr = ntracklets; itr--;)
       {
-	Int_t alabel = mult->GetLabel(itr, 0); // Take the label of the first layer
-	toWrite[TMath::Abs(alabel)] = 1;
+        Int_t alabel = mult->GetLabel(itr, 0); // Take the label of the first layer
+        toWrite[TMath::Abs(alabel)] = 1;
       }
 
       // For each MUON track keep the corresponding MC particle
@@ -1555,12 +1678,12 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 
       for (Int_t imu = 0; imu < nmuons; ++imu)
       {
-	Int_t alabel = 0;
-	if (fESD) {
-	  AliESDMuonTrack *mutrk = fESD->GetMuonTrack(imu);
-	  alabel = mutrk->GetLabel();
-	  toWrite[TMath::Abs(alabel)] = 1;
-	}
+        Int_t alabel = 0;
+        if (fESD) {
+          AliESDMuonTrack *mutrk = fESD->GetMuonTrack(imu);
+          alabel = mutrk->GetLabel();
+          toWrite[TMath::Abs(alabel)] = 1;
+        }
       }
     }
 
@@ -1582,50 +1705,50 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
       Bool_t write = aodmcpt ? kTRUE : kFALSE;
 
       if (MCEvt) {
-	if (i < nMCprim)
+	      if (i < nMCprim)
         {
-	  // Select all primary particles
-	  write = kTRUE;
-	}
-	else if (particle->GetUniqueID() == kPDecay)
+          // Select all primary particles
+          write = kTRUE;
+	      }
+	      else if (particle->GetUniqueID() == kPDecay)
         {
-	  // Particles from decay
-	  // Check that the decay chain ends at a primary particle
-	  AliVParticle *mother = vpt;
-	  Int_t imo = vpt->GetMother();
-	  while ((imo >= nMCprim) && (mother->Particle()->GetUniqueID() == kPDecay))
+          // Particles from decay
+          // Check that the decay chain ends at a primary particle
+          AliVParticle *mother = vpt;
+          Int_t imo = vpt->GetMother();
+          while ((imo >= nMCprim) && (mother->Particle()->GetUniqueID() == kPDecay))
+                {
+            mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
+            imo = mother->GetMother();
+              }
+          // Select according to pseudorapidity and production point of primary ancestor
+          if (imo < nMCprim)
+            write = kTRUE;
+	      }
+	      else if (particle->GetUniqueID() == kPPair)
+        {
+          // Now look for pair production
+          Int_t imo = vpt->GetMother();
+          if (imo < nMCprim)
           {
-	    mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
-	    imo = mother->GetMother();
-         }
-	  // Select according to pseudorapidity and production point of primary ancestor
-	  if (imo < nMCprim)
-	    write = kTRUE;
-	}
-	else if (particle->GetUniqueID() == kPPair)
-        {
-	  // Now look for pair production
-	  Int_t imo = vpt->GetMother();
-	  if (imo < nMCprim)
-	  {
-	    // Select, if the gamma is a primary
-	    write = kTRUE;
-	  }
-	  else
-          {
-	    // Check if the gamma comes from the decay chain of a primary particle
-	    AliVParticle *mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
-	    imo = mother->GetMother();
-	    while ((imo >= nMCprim) && (mother->Particle()->GetUniqueID() == kPDecay))
-	    {
-	      mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
-	      imo = mother->GetMother();
-	    }
-	    // Select according to pseudorapidity and production point
-	    if (imo < nMCprim && Select(mother->Particle(), rv, zv))
-	      write = kTRUE;
-	  }
-	}
+            // Select, if the gamma is a primary
+            write = kTRUE;
+          }
+          else
+                {
+            // Check if the gamma comes from the decay chain of a primary particle
+            AliVParticle *mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
+            imo = mother->GetMother();
+            while ((imo >= nMCprim) && (mother->Particle()->GetUniqueID() == kPDecay))
+            {
+              mother = MCEvt ? MCEvt->GetTrack(imo) : dynamic_cast<AliAODMCParticle*>(MCArray->At(imo));
+              imo = mother->GetMother();
+            }
+            // Select according to pseudorapidity and production point
+            if (imo < nMCprim && Select(mother->Particle(), rv, zv))
+              write = kTRUE;
+          }
+        }
       }
       if (toWrite[i] > 0 || write)
       {
@@ -1953,9 +2076,16 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
           track->GetHMPIDmip(xMip, yMip, qMip, nPhot);
 
           hmpids.fHMPIDSignal = AliMathBase::TruncateFloatFraction(track->GetHMPIDsignal(), mTrackSignal);
-          hmpids.fHMPIDDistance = AliMathBase::TruncateFloatFraction(TMath::Sqrt((xPc - xMip) * (xPc - xMip) + (yPc - yMip) * (yPc - yMip)), mTrackSignal);
+          hmpids.fHMPIDXTrack = xPc;
+          hmpids.fHMPIDYTrack = yPc;
+          hmpids.fHMPIDXMip = xMip;
+          hmpids.fHMPIDYMip = yMip;
           hmpids.fHMPIDNPhotons = static_cast<Short_t>(nPhot);
           hmpids.fHMPIDQMip = static_cast<Short_t>(qMip);
+          hmpids.fHMPIDClusSize = -999; // dummy values from converter
+          hmpids.fHMPIDMom = -999; // dummy values from converter
+          // hmpids.fHMPIDDistance = AliMathBase::TruncateFloatFraction(TMath::Sqrt((xPc - xMip) * (xPc - xMip) + (yPc - yMip) * (yPc - yMip)), mTrackSignal);
+          // hmpids.fHMPIDPhotsCharge = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.}; // dummy values from converter
           FillTree(kHMPID);
           if (fTreeStatus[kHMPID])
             eventextra.fNentries[kHMPID]++;
@@ -2111,10 +2241,13 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
     {
       // Find the modified label
       Int_t klabel = kineIndex[TMath::Abs(mclabel)];
-      mccalolabel.fIndexMcParticles = TMath::Abs(klabel) + fOffsetLabel;
-      mccalolabel.fMcMask = 0;
-      if (mclabel < 0 || klabel < 0)
-        mccalolabel.fMcMask |= (0x1 << 15);
+      mccalolabel.fIndexMcParticles.resize(1);
+      mccalolabel.fIndexMcParticles[0] = TMath::Abs(klabel) + fOffsetLabel;
+      mccalolabel.fAmplitudeFraction.resize(1);
+      mccalolabel.fAmplitudeFraction[0] = 1.f;
+      // mccalolabel.fMcMask = 0;
+      // if (mclabel < 0 || klabel < 0)
+      //   mccalolabel.fMcMask |= (0x1 << 15);
 
       FillTree(kMcCaloLabel);
     }
@@ -2345,10 +2478,13 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
       // Find the modified label
       if(mclabel>=0){  //label -1 == no primary
         Int_t klabel = kineIndex[mclabel];
-        mccalolabel.fIndexMcParticles = TMath::Abs(klabel) + fOffsetLabel;
-        mccalolabel.fMcMask = 0;
-        if ( klabel < 0)
-          mccalolabel.fMcMask |= (0x1 << 15);
+        mccalolabel.fIndexMcParticles.resize(1);
+        mccalolabel.fIndexMcParticles[0] = TMath::Abs(klabel) + fOffsetLabel;
+        mccalolabel.fAmplitudeFraction.resize(1);
+        mccalolabel.fAmplitudeFraction[0] = 1.f;
+        // mccalolabel.fMcMask = 0;
+        // if (mclabel < 0 || klabel < 0)
+        //   mccalolabel.fMcMask |= (0x1 << 15);
 
         FillTree(kMcCaloLabel);
       }
@@ -2414,29 +2550,31 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
   AliAODZDC *aodzdc = fAOD ? fAOD->GetZDCData() : nullptr;
   zdc.fIndexBCs = fBCCount;
 
-  zdc.fTimeZNA = 999.f;
-  zdc.fTimeZNC = 999.f;
-  zdc.fTimeZPA = 999.f;
-  zdc.fTimeZPC = 999.f;
-  zdc.fTimeZEM1 = 999.f;
-  zdc.fTimeZEM2 = 999.f;
+
+  zdc.fEnergy.clear();
+  zdc.fChannelE.clear();
+  zdc.fAmplitude.clear();
+  zdc.fTime.clear();
+  zdc.fChannelT.clear();
+
+  // In the conversion between RUN2 data to RUN3 the ZDC energies and amplitudes
+  // have the same content whereas in RUN3 they provide two different estimates
+  // of the same physical quantity.
+  // For the energy array we choose to preserve the RUN2 reconstruction feature to 
+  // record the energy regardless of the actual presence of the signal
+  // Therefore when analyzing RUN2 you will have energy measurements even in absence of
+  // a TDC hit, while in RUN3 the energy information would not be stored because
+  // of zero suppression.
+  // For the amplitudes and TDCs we adopt the RUN3 zero suppression feature i.e. to
+  // store output only if signal (i.e.) TDC is present i.e. there are not
+  // the dummy TDC values of 999 if the TDC hit is not present.
+  // We try to preserve the RUN3 ordering of reconstructed channels in the arrays
+  // Credit to Pietro Cortese - pietro.cortese@to.infn.it
 
   if (esdzdc) {
-    // ZEM
-    zdc.fEnergyZEM1 = esdzdc->GetZEM1Energy();
-    zdc.fEnergyZEM2 = esdzdc->GetZEM2Energy();
-    zdc.fEnergyCommonZNA = esdzdc->GetZNATowerEnergy()[0];
-    zdc.fEnergyCommonZNC = esdzdc->GetZNCTowerEnergy()[0];
-    zdc.fEnergyCommonZPA = esdzdc->GetZPATowerEnergy()[0];
-    zdc.fEnergyCommonZPC = esdzdc->GetZPCTowerEnergy()[0];
+    // Temporary vector to check the presence of hits in the TDCs
+    std::vector<float> zdcTime = { 999.f, 999.f, 999.f, 999.f, 999.f, 999.f };
 
-    // ZDC (P,N) sectors
-    for (Int_t ich = 0; ich < 4; ++ich) {
-      zdc.fEnergySectorZNA[ich] = esdzdc->GetZNATowerEnergy()[ich + 1];
-      zdc.fEnergySectorZNC[ich] = esdzdc->GetZNCTowerEnergy()[ich + 1];
-      zdc.fEnergySectorZPA[ich] = esdzdc->GetZPATowerEnergy()[ich + 1];
-      zdc.fEnergySectorZPC[ich] = esdzdc->GetZPCTowerEnergy()[ich + 1];
-    }
     // ZDC TDC
     Bool_t isHitFlagFilled = fESD->GetRunNumber() >= 208502;
     Bool_t isZNAhit = isHitFlagFilled ? esdzdc->IsZNAhit() : 1;
@@ -2454,42 +2592,188 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
       Float_t tZPC = isZPChit ? esdzdc->GetZDCTDCCorrected(esdzdc->GetZPCTDCChannel(), i) : 999.f;
       Float_t tZEM1 = isZEM1hit ? esdzdc->GetZDCTDCCorrected(esdzdc->GetZEM1TDCChannel(), i) : 999.f;
       Float_t tZEM2 = isZEM2hit ? esdzdc->GetZDCTDCCorrected(esdzdc->GetZEM2TDCChannel(), i) : 999.f;
-      if (tZNA > -12.5 && tZNA < 12.5 && zdc.fTimeZNA > 998)
-	zdc.fTimeZNA = tZNA;
-      if (tZNC > -12.5 && tZNC < 12.5 && zdc.fTimeZNC > 998)
-	zdc.fTimeZNC = tZNC;
-      if (tZPA > -12.5 && tZPA < 12.5 && zdc.fTimeZPA > 998)
-	zdc.fTimeZPA = tZPA;
-      if (tZPC > -12.5 && tZPC < 12.5 && zdc.fTimeZPC > 998)
-	zdc.fTimeZPC = tZPC;
-      if (tZEM1 > -12.5 && tZEM1 < 12.5 && zdc.fTimeZEM1 > 998)
-	zdc.fTimeZEM1 = tZEM1;
-      if (tZEM2 > -12.5 && tZEM2 < 12.5 && zdc.fTimeZEM2 > 998)
-	zdc.fTimeZEM2 = tZEM2;
+      if (tZNA > -12.5 && tZNA < 12.5 && zdcTime[0] > 998){
+        zdcTime[0] = tZNA;
+      }
+      if (tZNC > -12.5 && tZNC < 12.5 && zdcTime[0] > 998){
+        zdcTime[1] = tZNC;
+      }
+      if (tZPA > -12.5 && tZPA < 12.5 && zdcTime[1] > 998){
+        zdcTime[2] = tZPA;
+      }
+      if (tZPC > -12.5 && tZPC < 12.5 && zdcTime[2] > 998){
+        zdcTime[3] = tZPC;
+      }
+      if (tZEM1 > -12.5 && tZEM1 < 12.5 && zdcTime[3] > 998){
+        zdcTime[4] = tZEM1;
+      }
+      if (tZEM2 > -12.5 && tZEM2 < 12.5 && zdcTime[4] > 998){
+        zdcTime[5] = tZEM2;
+      }
     }
-  }
-  else {
-    // ZEM
-    zdc.fEnergyZEM1 = aodzdc->GetZEM1Energy();
-    zdc.fEnergyZEM2 = aodzdc->GetZEM2Energy();
-    zdc.fEnergyCommonZNA = aodzdc->GetZNATowerEnergy()[0];
-    zdc.fEnergyCommonZNC = aodzdc->GetZNCTowerEnergy()[0];
-    zdc.fEnergyCommonZPA = aodzdc->GetZPATowerEnergy()[0];
-    zdc.fEnergyCommonZPC = aodzdc->GetZPCTowerEnergy()[0];
+
+    // ZNA
+    zdc.fEnergy.emplace_back(esdzdc->GetZNATowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZNAC);
+    if (zdcTime[0] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZNATowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[0]);
+      zdc.fChannelT.emplace_back(IdZNAC);
+    }
+
+    // ZNA sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(esdzdc->GetZNATowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZNA1 + ich);
+    }
+
+    // ZPA
+    zdc.fEnergy.emplace_back(esdzdc->GetZPATowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZPAC);
+    if (zdcTime[2] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZPATowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[2]);
+      zdc.fChannelT.emplace_back(IdZPAC);
+    }
+
+    // ZPA sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(esdzdc->GetZPATowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZPA1 + ich);
+    }
+
+    // ZEM1
+    zdc.fEnergy.emplace_back(esdzdc->GetZEM1Energy());
+    zdc.fChannelE.emplace_back(IdZEM1);
+    if (zdcTime[4] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZEM1Energy()); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[4]);
+      zdc.fChannelT.emplace_back(IdZEM1);
+    }
+
+    // ZEM2
+    zdc.fEnergy.emplace_back(esdzdc->GetZEM2Energy());
+    zdc.fChannelE.emplace_back(IdZEM2);
+    if (zdcTime[5] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZEM2Energy()); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[5]);
+      zdc.fChannelT.emplace_back(IdZEM2);
+    }
+
+    // ZNC
+    zdc.fEnergy.emplace_back(esdzdc->GetZNCTowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZNCC);
+    if (zdcTime[1] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZNCTowerEnergy()[0]);  // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[1]);
+      zdc.fChannelT.emplace_back(IdZNCC);
+    }
+
+    // ZNC sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(esdzdc->GetZNCTowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZNC1 + ich);
+    }
+
+    // ZPC
+    zdc.fEnergy.emplace_back(esdzdc->GetZPCTowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZPCC);
+    if (zdcTime[3] < 12.5) {
+      zdc.fAmplitude.emplace_back(esdzdc->GetZPCTowerEnergy()[0]);  // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(zdcTime[3]);
+      zdc.fChannelT.emplace_back(IdZPCC);
+    }
 
     // ZDC (P,N) sectors
     for (Int_t ich = 0; ich < 4; ++ich) {
-      zdc.fEnergySectorZNA[ich] = aodzdc->GetZNATowerEnergy()[ich + 1];
-      zdc.fEnergySectorZNC[ich] = aodzdc->GetZNCTowerEnergy()[ich + 1];
-      zdc.fEnergySectorZPA[ich] = aodzdc->GetZPATowerEnergy()[ich + 1];
-      zdc.fEnergySectorZPC[ich] = aodzdc->GetZPCTowerEnergy()[ich + 1];
+      zdc.fEnergy.emplace_back(esdzdc->GetZPCTowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZPC1 + ich);
     }
+
+  } else {
+    // ZNA
+    zdc.fEnergy.emplace_back(aodzdc->GetZNATowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZNAC);
+    if(aodzdc->GetZNATime() < 12.5){
+      zdc.fAmplitude.emplace_back(aodzdc->GetZNATowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(aodzdc->GetZNATime());
+      zdc.fChannelT.emplace_back(IdZNAC);
+    }
+
+    // ZNA sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(aodzdc->GetZNATowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZNA1 + ich);
+    }
+
+    // ZPA
+    zdc.fEnergy.emplace_back(aodzdc->GetZPATowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZPAC);
+    if(aodzdc->GetZPATime()<12.5){
+      zdc.fAmplitude.emplace_back(aodzdc->GetZPATowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(aodzdc->GetZPATime());
+      zdc.fChannelT.emplace_back(IdZPAC);
+    }
+
+    // ZPA sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(aodzdc->GetZPATowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZPA1 + ich);
+    }
+
+    // ZEM1,2 times are not in AOD therefore we do not store amplitudes and times
+    // ZEM1
+    zdc.fEnergy.emplace_back(aodzdc->GetZEM1Energy());
+    zdc.fChannelE.emplace_back(IdZEM1);
+
+    // ZEM2
+    zdc.fEnergy.emplace_back(aodzdc->GetZEM2Energy());
+    zdc.fChannelE.emplace_back(IdZEM2);
+
+    // ZNC
+    zdc.fEnergy.emplace_back(aodzdc->GetZNCTowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZNCC);
+    if(aodzdc->GetZNCTime() < 12.5){
+      zdc.fAmplitude.emplace_back(aodzdc->GetZNCTowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(aodzdc->GetZNCTime());
+      zdc.fChannelT.emplace_back(IdZNCC);
+    }
+
+    // ZNC sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(aodzdc->GetZNCTowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZNC1 + ich);
+    }
+
+    // ZPC
+    zdc.fEnergy.emplace_back(aodzdc->GetZPCTowerEnergy()[0]);
+    zdc.fChannelE.emplace_back(IdZPCC);
+    if(aodzdc->GetZPCTime() < 12.5){
+      zdc.fAmplitude.emplace_back(aodzdc->GetZPCTowerEnergy()[0]); // WARNING: copy of the energy information
+      zdc.fTime.emplace_back(aodzdc->GetZPCTime());
+      zdc.fChannelT.emplace_back(IdZPCC);
+    }
+
+    // ZPC sectors
+    for (Int_t ich = 0; ich < 4; ++ich) {
+      zdc.fEnergy.emplace_back(aodzdc->GetZPCTowerEnergy()[ich + 1]);
+      zdc.fChannelE.emplace_back(IdZPC1 + ich);
+    }
+
+    // ZEM
+    // zdc.fEnergyZEM1 = aodzdc->GetZEM1Energy();
+    // zdc.fEnergyZEM2 = aodzdc->GetZEM2Energy();
+    // zdc.fEnergyCommonZNA = aodzdc->GetZNATowerEnergy()[0];
+    // zdc.fEnergyCommonZNC = aodzdc->GetZNCTowerEnergy()[0];
+    // zdc.fEnergyCommonZPA = aodzdc->GetZPATowerEnergy()[0];
+    // zdc.fEnergyCommonZPC = aodzdc->GetZPCTowerEnergy()[0];
+
     // ZDC TDC
     // Storing first ZDC hit in +/-12.5 ns around 0
-    zdc.fTimeZNA = aodzdc->GetZNATime();
-    zdc.fTimeZNC = aodzdc->GetZNCTime();
-    zdc.fTimeZPA = aodzdc->GetZPATime();
-    zdc.fTimeZPC = aodzdc->GetZPCTime();
+    // zdc.fTimeZNA = aodzdc->GetZNATime();
+    // zdc.fTimeZNC = aodzdc->GetZNCTime();
+    // zdc.fTimeZPA = aodzdc->GetZPATime();
+    // zdc.fTimeZPC = aodzdc->GetZPCTime();
     //PH ZEM1,2 times are not in AOD
   }
 
@@ -2616,21 +2900,24 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
     v0s.fIndexCollisions = fCollisionCount;
     for (Int_t iv0 = 0; iv0 < nv0; ++iv0) {
       v0Lookup[iv0] = -1; // not stored
+      v0s.fV0Type = static_cast<uint8_t>(-1); // first bit on
       if (fESD) {
-	AliESDv0 *v0 = fESD->GetV0(iv0);
-	// select only "offline" V0s, skip the "on-the-fly" ones
-	if (!v0 || v0->GetOnFlyStatus())
+        AliESDv0 *v0 = fESD->GetV0(iv0);
+        // select only "offline" V0s, skip the "on-the-fly" ones
+        if (!v0 || v0->GetOnFlyStatus()){
           continue;
+        }
         Int_t pidx = v0->GetPindex();
         Int_t nidx = v0->GetNindex();
         v0s.fIndexTracksPos = TMath::Abs(pidx) + fOffsetTrack; // Positive track ID
         v0s.fIndexTracksNeg = TMath::Abs(nidx) + fOffsetTrack; // Negative track ID
       }
       else {
-	AliAODv0 *v0 = fAOD->GetV0(iv0);
-	// select only "offline" V0s, skip the "on-the-fly" ones
-	if (!v0 || v0->GetOnFlyStatus())
+	      AliAODv0 *v0 = fAOD->GetV0(iv0);
+	      // select only "offline" V0s, skip the "on-the-fly" ones
+	      if (!v0 || v0->GetOnFlyStatus()){
           continue;
+        }
         Int_t pidx = v0->GetPosID();
         Int_t nidx = v0->GetNegID();
         v0s.fIndexTracksPos = TMath::Abs(pidx) + fOffsetTrack; // Positive track ID
@@ -2639,10 +2926,46 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 
       v0Lookup[iv0] = nv0_filled; // stored
       FillTree(kV0s);
-      if (fTreeStatus[kV0s])
-	nv0_filled++;
+      if (fTreeStatus[kV0s]){
+	      nv0_filled++;
+      }
     } // End loop on V0s
     eventextra.fNentries[kV0s] = nv0_filled;
+
+    //---------------------------------------------------------------------------
+    // V0sOTF (photo conversions)
+    Int_t nv0OTF_filled = 0; // total number of v0's filled per event
+    if(!(AliAnalysisTaskAO2Dconverter::GetAODConversionGammas())){
+      AliFatal("Could not receive AODConversionGammas!");
+    }
+    Int_t nPhotons = fConversionGammas->GetEntriesFast();
+    v0sOTF.fIndexCollisions = fCollisionCount;
+    for (Int_t iPhoton = 0; iPhoton < nPhotons; ++iPhoton) {
+      AliAODConversionPhoton* photon = (AliAODConversionPhoton*)fConversionGammas->At(iPhoton);
+      if (photon) {
+        v0sOTF.fIndexTracksPos = photon->GetLabel1() + fOffsetTrack;
+        v0sOTF.fIndexTracksNeg = photon->GetLabel2() + fOffsetTrack;
+        v0sOTF.fPx = photon->GetPx();
+        v0sOTF.fPy = photon->GetPy();
+        v0sOTF.fPz = photon->GetPz();
+        v0sOTF.fEnergy = photon->E(); // check if this is correct????
+        std::cout << "photon E = " << photon->E() << " photon p = " << photon->GetPhotonP() << std::endl;
+        v0sOTF.fQt = photon->GetArmenterosQt();
+        v0sOTF.fAlpha = photon->GetArmenterosAlpha();
+        v0sOTF.fCx = photon->GetConversionX();
+        v0sOTF.fCy = photon->GetConversionY();
+        v0sOTF.fCz = photon->GetConversionZ();
+        v0sOTF.fChi2NDF = photon->GetChi2perNDF();
+        v0sOTF.fPsiPair = photon->GetPsiPair();
+        v0sOTF.fQuality = photon->GetPhotonQuality();
+        v0sOTF.fTagged = photon->IsTagged();
+        FillTree(kV0sOTF);
+        if (fTreeStatus[kV0sOTF]){
+          nv0OTF_filled++;
+        }
+      }
+    } // End loop on V0s
+    eventextra.fNentries[kV0sOTF] = nv0OTF_filled;
 
     //---------------------------------------------------------------------------
     // Cascades
@@ -2916,6 +3239,7 @@ void AliAnalysisTaskAO2Dconverter::FillEventInTF()
 
 void AliAnalysisTaskAO2Dconverter::FinishTF()
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   // Write all trees
   for (Int_t i = 0; i < kTrees; i++)
     WriteTree((TreeIndex)i);
@@ -2930,6 +3254,7 @@ void AliAnalysisTaskAO2Dconverter::FinishTF()
 
 Bool_t AliAnalysisTaskAO2Dconverter::Select(TParticle *part, Float_t rv, Float_t zv)
 {
+  std::cout << "AliAnalysisTaskAO2Dconverter: " << __LINE__ << std::endl;
   /// Selection accoring to eta of the mother and production point
   /// This has to be refined !!!!!!
 
@@ -3613,5 +3938,144 @@ void AliAnalysisTaskAO2Dconverter::HeavyIon::Fill(AliGenEventHeader * genHeader,
     }
   }
 }
+
+//________________________________________________________________________
+Bool_t AliAnalysisTaskAO2Dconverter::GetAODConversionGammas(){
+
+  // Get reconstructed conversion photons from satellite AOD file
+
+  AliAODEvent *fAODEvent=dynamic_cast<AliAODEvent*>(fInputEvent);
+
+  if(!fAODEvent){
+    AliFatal("fInputEvent was not a AliAODEvent but we are in an AOD function.");
+    return kFALSE;
+  }
+
+  if(fConversionGammas == NULL){
+    fConversionGammas = new TClonesArray("AliAODConversionPhoton",100);
+  }
+  fConversionGammas->Delete();//Reset the TClonesArray
+
+  //Get Gammas from satellite AOD gamma branch
+
+  AliAODConversionPhoton *gamma=0x0;
+
+  if(!fInputGammas) {
+    fInputGammas=dynamic_cast<TClonesArray*>(fAODEvent->FindListObject(fDeltaAODBranchName.Data()));}
+  if(!fInputGammas){
+    FindDeltaAODBranchName();
+    fInputGammas=dynamic_cast<TClonesArray*>(fAODEvent->FindListObject(fDeltaAODBranchName.Data()));}
+  if(!fInputGammas){
+    AliError("No Gamma Satellites found");
+    return kFALSE;}
+
+  // Apply Selection Cuts to Gammas and create local working copy
+  Bool_t relabelingWorkedForAll = kTRUE;
+  for(Int_t i=0;i<fInputGammas->GetEntriesFast();i++){
+    gamma=dynamic_cast<AliAODConversionPhoton*>(fInputGammas->At(i));
+    if(!gamma){
+      AliError("Non AliAODConversionPhoton type entry in fInputGammas. This event will get rejected.");
+      return kFALSE;
+    }
+    if(fRelabelAODs){
+      relabelingWorkedForAll &= RelabelAODPhotonCandidates(gamma);
+    }
+    new((*fConversionGammas)[fConversionGammas->GetEntriesFast()]) AliAODConversionPhoton(*gamma);
+  }
+  if(!relabelingWorkedForAll){
+    AliError("For one or more photon candidate the AOD daughters could not be found. The labels of those were set to -999999 and the event will get rejected.");
+    return kFALSE;
+  }
+
+  return kTRUE;
+}
+
+//________________________________________________________________________
+void AliAnalysisTaskAO2Dconverter::FindDeltaAODBranchName(){
+
+  // Find delta AOD branchname containing reconstructed photons
+
+  TList *list=fInputEvent->GetList();
+  for(Int_t ii=0;ii<list->GetEntries();ii++){
+    TString name((list->At(ii))->GetName());
+    if(name.BeginsWith(fDeltaAODBranchName)&&name.EndsWith("gamma")){
+      fDeltaAODBranchName=name;
+      AliInfo(Form("Set DeltaAOD BranchName to: %s",fDeltaAODBranchName.Data()));
+      return;
+    }
+  }
+  AliInfo(Form("Did not find DeltaAOD BranchName. Used %s for the search.", fDeltaAODBranchName.Data()));
+}
+
+//________________________________________________________________________
+Bool_t AliAnalysisTaskAO2Dconverter::RelabelAODPhotonCandidates(AliAODConversionPhoton *PhotonCandidate){
+
+  // if(fPreviousV0ReaderPerformsAODRelabeling == 2) return kTRUE;
+  // else if(fPreviousV0ReaderPerformsAODRelabeling == 0){
+  //   printf("Running AODs! Determine if V0Reader '%s' should perform relabeling\n",this->GetName());
+  //   TObjArray* obj = (TObjArray*)AliAnalysisManager::GetAnalysisManager()->GetTasks();
+  //   Int_t iPosition = obj->IndexOf(this);
+  //   Bool_t prevV0ReaderRunningButNotRelabeling = kFALSE;
+  //   for(Int_t i=iPosition-1; i>=0; i--){
+  //    if( (obj->At(i))->IsA() == AliV0ReaderV1::Class()){
+  //      AliV0ReaderV1* tempReader = (AliV0ReaderV1*) obj->At(i);
+  //      if( tempReader->AreAODsRelabeled() && tempReader->IsReaderPerformingRelabeling() == 1){
+  //        fPreviousV0ReaderPerformsAODRelabeling = 2;
+  //        prevV0ReaderRunningButNotRelabeling = kFALSE;
+  //        printf("V0Reader '%s' is running before this V0Reader '%s': do _NOT_ relabel AODs by current reader!\n",tempReader->GetName(),this->GetName());
+  //        break;
+  //      }else prevV0ReaderRunningButNotRelabeling = kTRUE;
+  //    }
+  //   }
+  //   if(prevV0ReaderRunningButNotRelabeling) AliFatal(Form("There are V0Readers before '%s', but none of them is relabeling!",this->GetName()));
+
+  //   if(fPreviousV0ReaderPerformsAODRelabeling == 2) return kTRUE;
+  //   else{
+  //     printf("This V0Reader '%s' is first to be processed: do relabel AODs by current reader!\n",this->GetName());
+  //     fPreviousV0ReaderPerformsAODRelabeling = 1;
+  //   }
+  // }
+
+  // if(fPreviousV0ReaderPerformsAODRelabeling != 1) AliFatal(Form("In %s: fPreviousV0ReaderPerformsAODRelabeling = '%i' - while it should be impossible it is something different than '1'!",this->GetName(),fPreviousV0ReaderPerformsAODRelabeling));
+
+  // Relabeling For AOD Event
+  // ESDiD -> AODiD
+  // MCLabel -> AODMCLabel
+  Bool_t AODLabelPos = kFALSE;
+  Bool_t AODLabelNeg = kFALSE;
+
+  for(Int_t i = 0; i<fInputEvent->GetNumberOfTracks();i++){
+    AliAODTrack *tempDaughter = static_cast<AliAODTrack*>(fInputEvent->GetTrack(i));
+    if(!AODLabelPos){
+      if( tempDaughter->GetID() == PhotonCandidate->GetTrackLabelPositive() ){
+        PhotonCandidate->SetMCLabelPositive(TMath::Abs(tempDaughter->GetLabel()));
+        PhotonCandidate->SetLabelPositive(i);
+        AODLabelPos = kTRUE;
+      }
+    }
+    if(!AODLabelNeg){
+      if( tempDaughter->GetID() == PhotonCandidate->GetTrackLabelNegative()){
+        PhotonCandidate->SetMCLabelNegative(TMath::Abs(tempDaughter->GetLabel()));
+        PhotonCandidate->SetLabelNegative(i);
+        AODLabelNeg = kTRUE;
+      }
+    }
+    if(AODLabelNeg && AODLabelPos){
+      return kTRUE;
+    }
+  }
+
+  // if we get here at least one daughter could not be found
+  if(!AODLabelNeg){
+    PhotonCandidate->SetMCLabelNegative(-999999);
+    PhotonCandidate->SetLabelNegative(-999999);
+  }
+  if(!AODLabelPos){
+    PhotonCandidate->SetMCLabelPositive(-999999);
+    PhotonCandidate->SetLabelPositive(-999999);
+  }
+  return kFALSE;
+}
+
 
 ////////////////////////////////////////////////////////////

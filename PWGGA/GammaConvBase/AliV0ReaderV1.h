@@ -85,9 +85,9 @@ class AliV0ReaderV1 : public AliAnalysisTaskSE {
     Int_t                     GetNReconstructedGammas() const       {if(fConversionGammas){return fConversionGammas->GetEntriesFast();} else{ return 0;}}
     AliConversionPhotonBase *operator[](int index) const;
 
-    AliConversionPhotonCuts*  GetConversionCuts()                   {return fConversionCuts;}
+    AliConversionPhotonCuts*  GetConversionCuts()                   {return fConversionPhotonCuts;}
     AliConvEventCuts*         GetEventCuts()                        {return fEventCuts;}
-    TList*                    GetCutHistograms()                    {if(fConversionCuts) {return fConversionCuts->GetCutHistograms();}
+    TList*                    GetCutHistograms()                    {if(fConversionPhotonCuts) {return fConversionPhotonCuts->GetCutHistograms();}
                                                                      return NULL;}
     TList*                    GetEventCutHistograms()               {if(fEventCuts) {return fEventCuts->GetCutHistograms();}
                                                                      return NULL;}
@@ -102,7 +102,7 @@ class AliV0ReaderV1 : public AliAnalysisTaskSE {
     void               CalculatePtMaxSector();
 
     void               SetConversionCuts(const TString cut);
-    void               SetConversionCuts(AliConversionPhotonCuts *cuts) {fConversionCuts=cuts; return;}
+    void               SetConversionCuts(AliConversionPhotonCuts *cuts) {fConversionPhotonCuts=cuts; return;}
     void               SetEventCuts(const TString cut);
     void               SetEventCuts(AliConvEventCuts *cuts)             {fEventCuts=cuts; return;}
 
@@ -200,20 +200,20 @@ class AliV0ReaderV1 : public AliAnalysisTaskSE {
     Double_t             GetPsiPair(const AliESDv0* v0, const AliExternalTrackParam *positiveparam, const AliExternalTrackParam *negativeparam, const Double_t convpos[3]) const;
 
 
-    Bool_t         kAddv0sInESDFilter;            // Add PCM v0s to AOD created in ESD filter
-    TBits		   *fPCMv0BitField;               //! Pointer to bitfield of PCM v0s
-    AliConversionPhotonCuts  *fConversionCuts;    //-> Pointer to the ConversionCut Selection
-    AliConvEventCuts         *fEventCuts;         //-> Pointer to the EventCut Selection
-    TClonesArray             *fInputGammas;       // TClonesArray holding input gammas
-    TClonesArray             *fConversionGammas;  // TClonesArray holding the reconstructed photons
-    Bool_t         fUseImprovedVertex;            // set flag to improve primary vertex estimation by adding photons
-    Bool_t         fUseOwnXYZCalculation;         //flag that determines if we use our own calculation of xyz (markus)
-    Bool_t         fUseConstructGamma;            //flag that determines if we use ConstructGamma method from AliKF
-    Bool_t         kUseAODConversionPhoton;       // set flag to use AOD instead of KF output format for photons
-    Bool_t         fCreateAOD;                    // set flag for AOD creation
-    TString        fDeltaAODBranchName;           // File where Gamma Conv AOD is located, if not in default AOD
-    TString        fDeltaAODFilename;             // set filename for delta/satellite aod
-    Bool_t         fRelabelAODs;                  //
+    Bool_t         kAddv0sInESDFilter;                // Add PCM v0s to AOD created in ESD filter
+    TBits		   *fPCMv0BitField;                       //! Pointer to bitfield of PCM v0s
+    AliConversionPhotonCuts  *fConversionPhotonCuts;  //-> Pointer to the ConversionCut Selection
+    AliConvEventCuts         *fEventCuts;             //-> Pointer to the EventCut Selection
+    TClonesArray             *fInputGammas;           // TClonesArray holding input gammas
+    TClonesArray             *fConversionGammas;      // TClonesArray holding the reconstructed photons
+    Bool_t         fUseImprovedVertex;                // set flag to improve primary vertex estimation by adding photons
+    Bool_t         fUseOwnXYZCalculation;             //flag that determines if we use our own calculation of xyz (markus)
+    Bool_t         fUseConstructGamma;                //flag that determines if we use ConstructGamma method from AliKF
+    Bool_t         kUseAODConversionPhoton;           // set flag to use AOD instead of KF output format for photons
+    Bool_t         fCreateAOD;                        // set flag for AOD creation
+    TString        fDeltaAODBranchName;               // File where Gamma Conv AOD is located, if not in default AOD
+    TString        fDeltaAODFilename;                 // set filename for delta/satellite aod
+    Bool_t         fRelabelAODs;                      //
     Int_t          fPreviousV0ReaderPerformsAODRelabeling; //! 0->not set, meaning V0Reader has not yet determined if it should do AODRelabeling, 1-> V0Reader perfomrs relabeling, 2-> previous V0Reader in list perfomrs relabeling
     Bool_t         fErrorAODRelabeling;           //! to remember if for the current event an error occured  while retrieving and relabeling of the gammas
     Bool_t         fEventIsSelected;              //!
@@ -302,13 +302,13 @@ class AliV0ReaderV1 : public AliAnalysisTaskSE {
 #endif
 
 inline void AliV0ReaderV1::SetConversionCuts(const TString cut){
-  if(fConversionCuts != NULL){
-  delete fConversionCuts;
-    fConversionCuts=NULL;
+  if(fConversionPhotonCuts != NULL){
+  delete fConversionPhotonCuts;
+    fConversionPhotonCuts=NULL;
   }
-  if(fConversionCuts == NULL){
-    fConversionCuts = new AliConversionPhotonCuts("V0ReaderCuts","V0ReaderCuts");
-    fConversionCuts->InitializeCutsFromCutString(cut.Data());
+  if(fConversionPhotonCuts == NULL){
+    fConversionPhotonCuts = new AliConversionPhotonCuts("V0ReaderCuts","V0ReaderCuts");
+    fConversionPhotonCuts->InitializeCutsFromCutString(cut.Data());
   }
 }
 

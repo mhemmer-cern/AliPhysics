@@ -10,6 +10,12 @@
 #include "AliESDMuonTrack.h"
 #include "AliEventCuts.h"
 #include "AliTriggerAnalysis.h"
+#include "AliConversionPhotonCuts.h"
+#include "AliKFConversionPhoton.h"
+#include "AliAODConversionPhoton.h"
+#include "AliConversionPhotonBase.h"
+#include "AliESDInputHandler.h"
+#include "AliAODInputHandler.h"
 #include <TString.h>
 #include <TMap.h>
 
@@ -18,6 +24,41 @@
 #include <Rtypes.h>
 
 #include <map>
+
+//< map detector/tower to continuous channel Id
+constexpr int IdDummy = -1;
+constexpr int IdVoid = -2;
+
+constexpr int IdZNAC = 0;
+constexpr int IdZNA1 = 1;
+constexpr int IdZNA2 = 2;
+constexpr int IdZNA3 = 3;
+constexpr int IdZNA4 = 4;
+constexpr int IdZNASum = 5;
+//
+constexpr int IdZPAC = 6;
+constexpr int IdZPA1 = 7;
+constexpr int IdZPA2 = 8;
+constexpr int IdZPA3 = 9;
+constexpr int IdZPA4 = 10;
+constexpr int IdZPASum = 11;
+//
+constexpr int IdZEM1 = 12;
+constexpr int IdZEM2 = 13;
+//
+constexpr int IdZNCC = 14;
+constexpr int IdZNC1 = 15;
+constexpr int IdZNC2 = 16;
+constexpr int IdZNC3 = 17;
+constexpr int IdZNC4 = 18;
+constexpr int IdZNCSum = 19;
+//
+constexpr int IdZPCC = 20;
+constexpr int IdZPC1 = 21;
+constexpr int IdZPC2 = 22;
+constexpr int IdZPC3 = 23;
+constexpr int IdZPC4 = 24;
+constexpr int IdZPCSum = 25;
 
 class AliVEvent;
 class AliESDEvent;
@@ -45,7 +86,7 @@ public:
   void SetUseTriggerAnalysis(Bool_t useTriggerAnalysis=kTRUE) { fUseTriggerAnalysis = useTriggerAnalysis;}
   Bool_t GetUseTriggerAnalysis() const {return fUseTriggerAnalysis;}
 
-  virtual void Init() {}
+  virtual void Init();
   virtual void NotifyRun();
   virtual void UserCreateOutputObjects();
   virtual void UserExec(Option_t *option);
@@ -80,6 +121,7 @@ public:
     kFT0,
     kFDD,
     kV0s,
+    kV0sOTF,
     kCascades,
     kTOF,
     kMcParticle,
@@ -184,8 +226,18 @@ public:
   void SetCentralityMethod(const char *method) { fCentralityMethod = method; } // Settter for centrality method
   void SetSkipPileup(Bool_t flag) { fSkipPileup = flag; }
   void SetSkipTPCPileup(Bool_t flag) { fSkipTPCPileup = flag; }
+  void SetDeltaAODFilename(TString s)                   {fDeltaAODFilename=s;}
+  void SetDeltaAODBranchName(TString string)            {fDeltaAODBranchName = string;
+                                                         fRelabelAODs = kTRUE;
+                                                         AliInfo(Form("Set DeltaAOD BranchName to: %s",fDeltaAODBranchName.Data()));
+                                                         AliInfo(Form("Relabeling of AODs has automatically been switched ON!"));
+                                                         }
   AliEventCuts& GetEventCuts() { return fEventCuts; }
+  Int_t GetFileType() { return fFileType; }
   Bool_t Select(TParticle* part, Float_t rv, Float_t zv);
+  Bool_t GetAODConversionGammas();
+  void FindDeltaAODBranchName();
+  Bool_t RelabelAODPhotonCandidates(AliAODConversionPhoton *PhotonCandidate);
 
   AliAnalysisFilter fTrackFilter; // Standard track filter object
 private:
@@ -196,6 +248,7 @@ private:
   AliTriggerAnalysis fTriggerAnalysis; // Trigger analysis object for event selection
   AliGRPObject *fGRP = nullptr; //! Global run parameters
   AliVEvent *fVEvent = nullptr; //! input ESD or AOD event
+  Int_t    fFileType = 0;       //! 0 for ESD, 1 for AOD
   AliESDEvent *fESD  = nullptr; //! input ESD event
   AliAODEvent *fAOD  = nullptr; //! input AOD event
   TList *fOutputList = nullptr; //! output list
@@ -222,6 +275,11 @@ private:
   int fBasketSizeTracks = 10000000;   // Maximum basket size of the trees for tracks
 
   TaskModes fTaskMode = kStandard; // Running mode of the task. Useful to set for e.g. MC mode
+  TClonesArray *fInputGammas;                               // TClonesArray holding input gammas
+  TClonesArray *fConversionGammas;                          // TClonesArray holding the reconstructed photons
+  TString fDeltaAODBranchName = "GammaConv_00000003_16000008400100001000000000_gamma";                // File where Gamma Conv AOD is located, if not in default AOD
+  TString fDeltaAODFilename = "AliAODGammaConversion.root"; // set filename for delta/satellite aod
+  Bool_t fRelabelAODs = kTRUE;                              // flag for relabling in case of AODs
 
   // Data structures
 
@@ -366,10 +424,17 @@ private:
 
     Int_t fIndexTracks = -1; /// Track ID
 
-    Float_t fHMPIDSignal = -999.f;   /// HMPID signal
-    Float_t fHMPIDDistance = -999.f; /// Distance between the extrapolated track and the cluster
-    Short_t fHMPIDNPhotons = -999;   /// Photons detected
-    Short_t fHMPIDQMip = -999;       /// Charge of the mip
+    Float_t fHMPIDSignal = -999.f;  /// HMPID signal
+    Float_t fHMPIDXTrack = -999.f;  /// Extrapolated track point x coordinate
+    Float_t fHMPIDYTrack = -999.f;  /// Extrapolated track point y coordinate
+    Float_t fHMPIDXMip = -999.f;     /// Matched MIP track point x coordinate
+    Float_t fHMPIDYMip = -999.f;     /// Matched MIP track point y coordinate
+    Short_t fHMPIDNPhotons = -999;  /// Number of detected photons in HMPID
+    Short_t fHMPIDQMip = -999;      /// Matched MIP cluster charge
+    Short_t fHMPIDClusSize = -999;  /// Matched MIP cluster size
+    Float_t fHMPIDMom = -999.f;     /// Track momentum at the HMPID
+    Float_t fHMPIDPhotsCharge[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};  /// Photon cluster charge
+    // Float_t fHMPIDDistance = -999.f; /// Distance between the extrapolated track and the cluster
   } hmpids; //! structure to keep HMPID info
 
   //---------------------------------------------------------------------------
@@ -401,9 +466,8 @@ private:
 
   struct {
     /// Calo cluster label to find the corresponding MC particle
-    Int_t fIndexMcParticles = 0;       ///< Calo label
-    UShort_t fMcMask = 0;    ///< Bit mask to indicate detector mismatches (bit ON means mismatch)
-                             ///< bit 15: negative label sign
+    std::vector<int> fIndexMcParticles = {-999};      ///< Calo label
+    std::vector<float> fAmplitudeFraction = {1.f};    ///< Amplitude fraction of deposited energy of the mc particle and the total cell amplitude
   } mccalolabel; ///<! Calo labels
 
   struct {
@@ -595,22 +659,28 @@ private:
 
   struct {
     Int_t   fIndexBCs = 0u;                 /// Index to BC table
-    Float_t fEnergyZEM1 = 0.f;           ///< E in ZEM1
-    Float_t fEnergyZEM2 = 0.f;           ///< E in ZEM2
-    Float_t fEnergyCommonZNA = 0.f;      ///< E in common ZNA PMT - high gain chain
-    Float_t fEnergyCommonZNC = 0.f;      ///< E in common ZNC PMT - high gain chain
-    Float_t fEnergyCommonZPA = 0.f;      ///< E in common ZPA PMT - high gain chain
-    Float_t fEnergyCommonZPC = 0.f;      ///< E in common ZPC PMT - high gain chain
-    Float_t fEnergySectorZNA[4] = {0.f}; ///< E in 4 ZNA sectors - high gain chain
-    Float_t fEnergySectorZNC[4] = {0.f}; ///< E in 4 ZNC sectors - high gain chain
-    Float_t fEnergySectorZPA[4] = {0.f}; ///< E in 4 ZPA sectors - high gain chain
-    Float_t fEnergySectorZPC[4] = {0.f}; ///< E in 4 ZPC sectors - high gain chain
-    Float_t fTimeZEM1 = 0.f;             ///< Corrected time in ZEM1
-    Float_t fTimeZEM2 = 0.f;             ///< Corrected time in ZEM2
-    Float_t fTimeZNA = 0.f;              ///< Corrected time in ZNA
-    Float_t fTimeZNC = 0.f;              ///< Corrected time in ZNC
-    Float_t fTimeZPA = 0.f;              ///< Corrected time in ZPA
-    Float_t fTimeZPC = 0.f;              ///< Corrected time in ZPC
+    std::vector<float> fEnergy = {};           ///< Energy of non-zero channels. The channel IDs are given in ChannelE (at the same index)
+    std::vector<uint8_t> fChannelE = {};       ///< Channel IDs which have reconstructed energy. There are at maximum 26 channels
+    std::vector<float> fAmplitude = {};        ///< Amplitudes of non-zero channels. The channel IDs are given in ChannelT (at the same index)
+    std::vector<float> fTime = {};             ///< Times of non-zero channels. The channel IDs are given in ChannelT (at the same index)
+    std::vector<uint8_t> fChannelT = {};       ///< Channel IDs which had non-zero amplitudes. There are at maximum 26 channels
+    // the following columns got removed with the new version 001, since they are now all dynamic
+    // Float_t fEnergyZEM1 = 0.f;           ///< E in ZEM1
+    // Float_t fEnergyZEM2 = 0.f;           ///< E in ZEM2
+    // Float_t fEnergyCommonZNA = 0.f;      ///< E in common ZNA PMT - high gain chain
+    // Float_t fEnergyCommonZNC = 0.f;      ///< E in common ZNC PMT - high gain chain
+    // Float_t fEnergyCommonZPA = 0.f;      ///< E in common ZPA PMT - high gain chain
+    // Float_t fEnergyCommonZPC = 0.f;      ///< E in common ZPC PMT - high gain chain
+    // Float_t fEnergySectorZNA[4] = {0.f}; ///< E in 4 ZNA sectors - high gain chain
+    // Float_t fEnergySectorZNC[4] = {0.f}; ///< E in 4 ZNC sectors - high gain chain
+    // Float_t fEnergySectorZPA[4] = {0.f}; ///< E in 4 ZPA sectors - high gain chain
+    // Float_t fEnergySectorZPC[4] = {0.f}; ///< E in 4 ZPC sectors - high gain chain
+    // Float_t fTimeZEM1 = 0.f;             ///< Corrected time in ZEM1
+    // Float_t fTimeZEM2 = 0.f;             ///< Corrected time in ZEM2
+    // Float_t fTimeZNA = 0.f;              ///< Corrected time in ZNA
+    // Float_t fTimeZNC = 0.f;              ///< Corrected time in ZNC
+    // Float_t fTimeZPA = 0.f;              ///< Corrected time in ZPA
+    // Float_t fTimeZPC = 0.f;              ///< Corrected time in ZPC
   } zdc;                                 //! structure to keep ZDC information
 
   struct {
@@ -665,7 +735,29 @@ private:
     Int_t fIndexCollisions = -1; /// The index of the collision vertex in the TF, to which the track is attached
     Int_t fIndexTracksPos = -1; // Positive track ID
     Int_t fIndexTracksNeg = -1; // Negative track ID
+    uint8_t fV0Type = 0; //custom bitmap for selection (standard or photon) 
   } v0s;               //! structure to keep v0sinformation
+
+  struct {
+    /// v0sOTF (Photons)
+    Int_t fIndexCollisions = -1; /// The index of the collision vertex in the TF, to which the track is attached
+    Int_t fIndexTracksPos = -1;   // Positive track ID
+    Int_t fIndexTracksNeg = -1;   // Negative track ID
+    float fPx             = 0.f;  // momentum in x
+    float fPy             = 0.f;  // momentum in y
+    float fPz             = 0.f;  // momentum in z
+    float fEnergy         = 0.f;  // energy
+    float fQt             = 0.f;  // Qt for Armenteros
+    float fAlpha          = 0.f;  // alpha for Armenteros
+    float fCx             = 0.f;  // conversion point in x
+    float fCy             = 0.f;  // conversion point in y
+    float fCz             = 0.f;  // conversion point in z
+    float fChi2NDF        = 0.f;  // Chi2 over NDF
+    float fPsiPair        = 0.f;  // psi pair
+    uint8_t fV0Type       = 1;    // custom bitmap for selection (standard or photon)
+    uint8_t fQuality      = 0;    // 0: garbage, 1: both tracks TPC only, 2: 1 track TPC only, 3: both tracks more than 1 ITS cluster
+    bool fTagged          = false;    // Is it tagged as decay pion (only for gammas)
+  } v0sOTF;               //! structure to keep v0sinformation
 
   struct {
     /// Cascades
@@ -738,7 +830,7 @@ private:
   FwdTrackPars MUONtoFwdTrack(AliESDMuonTrack&); // Converts MUON Tracks from ESD between RUN2 and RUN3 coordinates
   FwdTrackPars MUONtoFwdTrack(AliAODTrack&); // Converts MUON Tracks from AOD between RUN2 and RUN3 coordinates
 
-  ClassDef(AliAnalysisTaskAO2Dconverter, 29);
+  ClassDef(AliAnalysisTaskAO2Dconverter, 30);
 };
 
 #endif
