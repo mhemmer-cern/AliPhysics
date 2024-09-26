@@ -747,9 +747,6 @@ void AliAnalysisTaskPi0v2Calo::UserCreateOutputObjects(){
     }
     fHistoMotherInvMassPtV0CCos2phi = new TProfile2D *[fnCuts];
     fHistoMotherInvMassPtV0ACos2phi = new TProfile2D *[fnCuts];
-
-    fHistoMotherInvMassPtV0CCos2phi = new TProfile2D *[fnCuts];
-    fHistoMotherInvMassPtV0ACos2phi = new TProfile2D *[fnCuts];
     fHistoMotherBackInvMassPtV0CCos2phi = new TProfile2D *[fnCuts];
     fHistoMotherBackInvMassPtV0ACos2phi = new TProfile2D *[fnCuts];
     fHist2DPsi2V0CCent = new TH2D *[fnCuts];
@@ -967,74 +964,93 @@ void AliAnalysisTaskPi0v2Calo::UserCreateOutputObjects(){
       fHistoClusAllHeadersGammaPt[iCut]->Sumw2();
       fHistoClusRejectedHeadersGammaPt[iCut]->Sumw2();
     }
+    
     if(fDoMesonAnalysis){
       if(!fUseInOutPlane){
         fHistoMotherInvMassPtPhiV0A[iCut] = new TH3F("ESD_Mother_InvMass_Pt_PhiV0A", "ESD_Mother_InvMass_Pt_PhiV0A", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning, nPhiBins, arrPhiBin);
-        fHistoMotherInvMassPtPhiV0A[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtPhiV0A[iCut]->SetYTitle("p_{T} (GeV/c)");
-        fHistoMotherInvMassPtPhiV0A[iCut]->SetZTitle("phi");
+        fHistoMotherInvMassPtPhiV0A[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtPhiV0A[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
+        fHistoMotherInvMassPtPhiV0A[iCut]->SetZTitle("#Delta#varphi");
         fESDList[iCut]->Add(fHistoMotherInvMassPtPhiV0A[iCut]);
         fHistoMotherInvMassPtPhiV0C[iCut] = new TH3F("ESD_Mother_InvMass_Pt_PhiV0C", "ESD_Mother_InvMass_Pt_PhiV0C", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning, nPhiBins, arrPhiBin);
-        fHistoMotherInvMassPtPhiV0C[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtPhiV0C[iCut]->SetYTitle("p_{T} (GeV/c)");
-        fHistoMotherInvMassPtPhiV0C[iCut]->SetZTitle("phi");
+        fHistoMotherInvMassPtPhiV0C[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtPhiV0C[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
+        fHistoMotherInvMassPtPhiV0C[iCut]->SetZTitle("#Delta#varphi");
         fESDList[iCut]->Add(fHistoMotherInvMassPtPhiV0C[iCut]);
         fHistoMotherBackInvMassPtPhiV0A[iCut] = new TH3F("ESD_Background_InvMass_Pt_PhiV0A", "ESD_Background_InvMass_Pt_PhiV0A", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning, nPhiBins, arrPhiBin);
-        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetYTitle("p_{T} (GeV/c)");
-        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetZTitle("phi");
+        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
+        fHistoMotherBackInvMassPtPhiV0A[iCut]->SetZTitle("#Delta#varphi");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtPhiV0A[iCut]);
         fHistoMotherBackInvMassPtPhiV0C[iCut] = new TH3F("ESD_Background_InvMass_Pt_PhiV0C", "ESD_Background_InvMass_Pt_PhiV0C", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning, nPhiBins, arrPhiBin);
-        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetYTitle("p_{T} (GeV/c)");
-        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetZTitle("phi");
+        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
+        fHistoMotherBackInvMassPtPhiV0C[iCut]->SetZTitle("#Delta#varphi");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtPhiV0C[iCut]);
       } else{
         fHistoMotherInvMassPtV0CInPlane[iCut] = new TH2F("ESD_Mother_InvMass_Pt_V0C_InPlane", "ESD_Mother_InvMass_Pt_V0C_InPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherInvMassPtV0CInPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtV0CInPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherInvMassPtV0CInPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtV0CInPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherInvMassPtV0CInPlane[iCut]);
         fHistoMotherInvMassPtV0AInPlane[iCut] = new TH2F("ESD_Mother_InvMass_Pt_V0A_InPlane", "ESD_Mother_InvMass_Pt_V0A_InPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherInvMassPtV0AInPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtV0AInPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherInvMassPtV0AInPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtV0AInPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherInvMassPtV0AInPlane[iCut]);
         fHistoMotherInvMassPtV0COutPlane[iCut] = new TH2F("ESD_Mother_InvMass_Pt_V0C_OutPlane", "ESD_Mother_InvMass_Pt_V0C_OutPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherInvMassPtV0COutPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtV0COutPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherInvMassPtV0COutPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtV0COutPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherInvMassPtV0COutPlane[iCut]);
         fHistoMotherInvMassPtV0AOutPlane[iCut] = new TH2F("ESD_Mother_InvMass_Pt_V0A_OutPlane", "ESD_Mother_InvMass_Pt_V0A_OutPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherInvMassPtV0AOutPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherInvMassPtV0AOutPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherInvMassPtV0AOutPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherInvMassPtV0AOutPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherInvMassPtV0AOutPlane[iCut]);
         fHistoMotherBackInvMassPtV0CInPlane[iCut] = new TH2F("ESD_Background_InvMass_Pt_V0C_InPlane", "ESD_Background_InvMass_Pt_V0C_InPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherBackInvMassPtV0CInPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtV0CInPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherBackInvMassPtV0CInPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtV0CInPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0CInPlane[iCut]);
         fHistoMotherBackInvMassPtV0AInPlane[iCut] = new TH2F("ESD_Background_InvMass_Pt_V0A_InPlane", "ESD_Background_InvMass_Pt_V0A_InPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherBackInvMassPtV0AInPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtV0AInPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherBackInvMassPtV0AInPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtV0AInPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0AInPlane[iCut]);
         fHistoMotherBackInvMassPtV0COutPlane[iCut] = new TH2F("ESD_Background_InvMass_Pt_V0C_OutPlane", "ESD_Background_InvMass_Pt_V0C_OutPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherBackInvMassPtV0COutPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtV0COutPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherBackInvMassPtV0COutPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtV0COutPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0COutPlane[iCut]);
         fHistoMotherBackInvMassPtV0AOutPlane[iCut] = new TH2F("ESD_Background_InvMass_Pt_V0A_OutPlane", "ESD_Background_InvMass_Pt_V0A_OutPlane", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
-        fHistoMotherBackInvMassPtV0AOutPlane[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
-        fHistoMotherBackInvMassPtV0AOutPlane[iCut]->SetYTitle("p_{T} (GeV/c)");
+        fHistoMotherBackInvMassPtV0AOutPlane[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+        fHistoMotherBackInvMassPtV0AOutPlane[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
         fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0AOutPlane[iCut]);
       }
       fHistoMotherInvMassPtV0CCos2phi[iCut] = new TProfile2D("InvMassPtV0CCos2phi", "InvMassPtV0CCos2phi", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
+      fHistoMotherInvMassPtV0CCos2phi[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+      fHistoMotherInvMassPtV0CCos2phi[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
       fHistoMotherInvMassPtV0ACos2phi[iCut] = new TProfile2D("InvMassPtV0ACos2phi", "InvMassPtV0ACos2phi", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
+      fHistoMotherInvMassPtV0ACos2phi[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+      fHistoMotherInvMassPtV0ACos2phi[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
       fHistoMotherBackInvMassPtV0CCos2phi[iCut] = new TProfile2D("BackInvMassPtV0CCos2phi", "BackInvMassPtV0CCos2phi", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
+      fHistoMotherBackInvMassPtV0CCos2phi[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+      fHistoMotherBackInvMassPtV0CCos2phi[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
       fHistoMotherBackInvMassPtV0ACos2phi[iCut] = new TProfile2D("BackInvMassPtV0ACos2phi", "BackInvMassPtV0ACos2phi", nBinsMinv, arrMinvBin, nBinsPt, arrPtBinning);
+      fHistoMotherBackInvMassPtV0ACos2phi[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
+      fHistoMotherBackInvMassPtV0ACos2phi[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
       fESDList[iCut]->Add(fHistoMotherInvMassPtV0CCos2phi[iCut]);
       fESDList[iCut]->Add(fHistoMotherInvMassPtV0ACos2phi[iCut]);
       fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0CCos2phi[iCut]);
       fESDList[iCut]->Add(fHistoMotherBackInvMassPtV0ACos2phi[iCut]);
       // VZERO
-      fHist2DPsi2V0CCent[iCut] = new TH2D("fHist2DPsi2V0CCent", "", 20, 0, 100, 100, -2 * TMath::Pi(), 2 * TMath::Pi());
-      fHist2DPsi2V0ACent[iCut] = new TH2D("fHist2DPsi2V0ACent", "", 20, 0, 100, 100, -2 * TMath::Pi(), 2 * TMath::Pi());
+      fHist2DPsi2V0CCent[iCut] = new TH2D("fHist2DPsi2V0CCent", "", 20, 0, 100, 90, 0.f, TMath::Pi());
+      fHist2DPsi2V0CCent[iCut]->SetXTitle("centrality (%)");
+      fHist2DPsi2V0CCent[iCut]->SetYTitle("#psi_{2}^{V0C}");
+      fHist2DPsi2V0ACent[iCut] = new TH2D("fHist2DPsi2V0ACent", "", 20, 0, 100, 90, 0.f, TMath::Pi());
+      fHist2DPsi2V0ACent[iCut]->SetXTitle("centrality (%)");
+      fHist2DPsi2V0ACent[iCut]->SetYTitle("psi_{2}^{V0A}");
       fHist2V0Res[iCut] = new TProfile("fHist2V0Res", "", 4, 0, 4);
+      fHist2V0Res[iCut]->SetXTitle("centrality (%)");
+      fHist2V0Res[iCut]->SetYTitle("#Rgothic_{sub}");
+      fHist2V0Res[iCut]->GetXaxis()->SetBinLabel(1,"0-10");
+      fHist2V0Res[iCut]->GetXaxis()->SetBinLabel(2,"10-30");
+      fHist2V0Res[iCut]->GetXaxis()->SetBinLabel(3,"30-50");
+      fHist2V0Res[iCut]->GetXaxis()->SetBinLabel(4,"50-90");
       fESDList[iCut]->Add(fHist2DPsi2V0CCent[iCut]);
       fESDList[iCut]->Add(fHist2DPsi2V0ACent[iCut]);
       fESDList[iCut]->Add(fHist2V0Res[iCut]);
@@ -1580,7 +1596,7 @@ void AliAnalysisTaskPi0v2Calo::UserCreateOutputObjects(){
       if(fDoMesonAnalysis){
         fHistoTruePi0InvMassPt[iCut]                    = new TH2F("ESD_TruePi0_InvMass_Pt", "ESD_TruePi0_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTruePi0InvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTruePi0InvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTruePi0InvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fTrueList[iCut]->Add(fHistoTruePi0InvMassPt[iCut]);
         if (!fDoLightOutput){
             fHistoTruePi0InvMassPtAdditional[iCut]                = new TH2F("ESD_TruePi0_InvMass_Pt_Additional", "ESD_TruePi0_InvMass_Pt_Additional", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
@@ -1590,12 +1606,12 @@ void AliAnalysisTaskPi0v2Calo::UserCreateOutputObjects(){
         }
         fHistoDoubleCountTruePi0InvMassPt[iCut]         = new TH2F("ESD_TrueDoubleCountPi0_InvMass_Pt", "ESD_TrueDoubleCountPi0_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoDoubleCountTruePi0InvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoDoubleCountTruePi0InvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoDoubleCountTruePi0InvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fTrueList[iCut]->Add(fHistoDoubleCountTruePi0InvMassPt[iCut]);
         if( !fDoPi0Only ){
           fHistoTrueEtaInvMassPt[iCut]                    = new TH2F("ESD_TrueEta_InvMass_Pt", "ESD_TrueEta_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoTrueEtaInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoTrueEtaInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoTrueEtaInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fTrueList[iCut]->Add(fHistoTrueEtaInvMassPt[iCut]);
           if (!fDoLightOutput){
               fHistoTrueEtaInvMassPtAdditional[iCut]                =  new TH2F("ESD_TrueEta_InvMass_Pt_Additional", "ESD_TrueEta_InvMass_PtAdditional", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
@@ -1605,74 +1621,74 @@ void AliAnalysisTaskPi0v2Calo::UserCreateOutputObjects(){
           }
           fHistoDoubleCountTrueEtaInvMassPt[iCut]         = new TH2F("ESD_TrueDoubleCountEta_InvMass_Pt", "ESD_TrueDoubleCountEta_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoDoubleCountTrueEtaInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoDoubleCountTrueEtaInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoDoubleCountTrueEtaInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fTrueList[iCut]->Add(fHistoDoubleCountTrueEtaInvMassPt[iCut]);
           fHistoTruePrimaryEtaInvMassPt[iCut]             = new TH2F("ESD_TruePrimaryEta_InvMass_Pt", "ESD_TruePrimaryEta_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoTruePrimaryEtaInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoTruePrimaryEtaInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoTruePrimaryEtaInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fHistoTruePrimaryEtaInvMassPt[iCut]->Sumw2();
           fTrueList[iCut]->Add(fHistoTruePrimaryEtaInvMassPt[iCut]);
           fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]  = new TH2F("ESD_TruePrimaryEtaW0Weights_InvMass_Pt", "ESD_TruePrimaryEtaW0Weights_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]->Sumw2();
           fTrueList[iCut]->Add(fHistoTruePrimaryEtaW0WeightingInvMassPt[iCut]);
           fProfileTruePrimaryEtaWeightsInvMassPt[iCut]    = new TProfile2D("ESD_TruePrimaryEtaWeights_InvMass_Pt", "ESD_TruePrimaryEtaWeights_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fProfileTruePrimaryEtaWeightsInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fProfileTruePrimaryEtaWeightsInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fProfileTruePrimaryEtaWeightsInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fProfileTruePrimaryEtaWeightsInvMassPt[iCut]->Sumw2();
           fTrueList[iCut]->Add(fProfileTruePrimaryEtaWeightsInvMassPt[iCut]);
         }
         fHistoTruePrimaryPi0InvMassPt[iCut]             = new TH2F("ESD_TruePrimaryPi0_InvMass_Pt", "ESD_TruePrimaryPi0_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTruePrimaryPi0InvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTruePrimaryPi0InvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTruePrimaryPi0InvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fHistoTruePrimaryPi0InvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fHistoTruePrimaryPi0InvMassPt[iCut]);
         fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]  = new TH2F("ESD_TruePrimaryPi0W0Weights_InvMass_Pt", "ESD_TruePrimaryPi0W0Weights_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fHistoTruePrimaryPi0W0WeightingInvMassPt[iCut]);
         fProfileTruePrimaryPi0WeightsInvMassPt[iCut]    = new TProfile2D("ESD_TruePrimaryPi0Weights_InvMass_Pt", "ESD_TruePrimaryPi0Weights_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fProfileTruePrimaryPi0WeightsInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fProfileTruePrimaryPi0WeightsInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fProfileTruePrimaryPi0WeightsInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fProfileTruePrimaryPi0WeightsInvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fProfileTruePrimaryPi0WeightsInvMassPt[iCut]);
         fHistoTrueSecondaryPi0InvMassPt[iCut]           = new TH2F("ESD_TrueSecondaryPi0_InvMass_Pt", "ESD_TrueSecondaryPi0_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTrueSecondaryPi0InvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTrueSecondaryPi0InvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTrueSecondaryPi0InvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fHistoTrueSecondaryPi0InvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fHistoTrueSecondaryPi0InvMassPt[iCut]);
 
         if(!fDoLightOutput){
           fHistoTruePi0InvMassPtAlpha[iCut]               = new TH2F("ESD_TruePi0_InvMass_vs_Pt_Alpha", "ESD_TruePi0_InvMass_vs_Pt_Alpha", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoTruePi0InvMassPtAlpha[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoTruePi0InvMassPtAlpha[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoTruePi0InvMassPtAlpha[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fHistoTruePi0InvMassPtAlpha[iCut]->Sumw2();
           fESDList[iCut]->Add(fHistoTruePi0InvMassPtAlpha[iCut]);
           fHistoTruePi0PureGammaInvMassPtAlpha[iCut]      = new TH2F("ESD_TruePi0PureGamma_InvMass_vs_Pt_Alpha", "ESD_TruePi0PureGamma_InvMass_vs_Pt_Alpha", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
           fHistoTruePi0PureGammaInvMassPtAlpha[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-          fHistoTruePi0PureGammaInvMassPtAlpha[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+          fHistoTruePi0PureGammaInvMassPtAlpha[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
           fHistoTruePi0PureGammaInvMassPtAlpha[iCut]->Sumw2();
           fESDList[iCut]->Add(fHistoTruePi0PureGammaInvMassPtAlpha[iCut]);
         }
         fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]    = new TH2F("ESD_TrueSecondaryPi0FromK0s_InvMass_Pt", "ESD_TrueSecondaryPi0FromK0s_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fHistoTrueSecondaryPi0FromK0sInvMassPt[iCut]);
         fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]    = new TH2F("ESD_TrueSecondaryPi0FromK0l_InvMass_Pt", "ESD_TrueSecondaryPi0FromK0l_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]->Sumw2();
         fTrueList[iCut]->Add(fHistoTrueSecondaryPi0FromK0lInvMassPt[iCut]);
         fHistoTrueSecondaryPi0FromEtaInvMassPt[iCut]    = new TH2F("ESD_TrueSecondaryPi0FromEta_InvMass_Pt", "ESD_TrueSecondaryPi0FromEta_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTrueSecondaryPi0FromEtaInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTrueSecondaryPi0FromEtaInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTrueSecondaryPi0FromEtaInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fTrueList[iCut]->Add(fHistoTrueSecondaryPi0FromEtaInvMassPt[iCut]);
         fHistoTrueSecondaryPi0FromLambdaInvMassPt[iCut] = new TH2F("ESD_TrueSecondaryPi0FromLambda_InvMass_Pt", "ESD_TrueSecondaryPi0FromLambda_InvMass_Pt", nBinsMinv, 0, maxMinv, nBinsPt, arrPtBinning);
         fHistoTrueSecondaryPi0FromLambdaInvMassPt[iCut]->SetYTitle("#it{p}_{T} (GeV/#it{c})");
-        fHistoTrueSecondaryPi0FromLambdaInvMassPt[iCut]->SetXTitle("M_{#gamma#gamma} (GeV/c^{2})");
+        fHistoTrueSecondaryPi0FromLambdaInvMassPt[iCut]->SetXTitle("#it{M}_{#gamma#gamma} (GeV/#it{c}^{2})");
         fTrueList[iCut]->Add(fHistoTrueSecondaryPi0FromLambdaInvMassPt[iCut]);
         if (fIsMC > 1){
           fHistoTruePi0InvMassPt[iCut]->Sumw2();
@@ -1858,7 +1874,7 @@ void AliAnalysisTaskPi0v2Calo::UserExec(Option_t *)
     } else if (fCent >= 50 && fCent < 90) {
       centBin = 3;
     }
-    fHist2V0Res[iCut]->Fill(centBin + 0.5, cos(2 * (fPsi2V0A - fPsi2V0C)));
+    fHist2V0Res[iCut]->Fill(centBin + 0.5, cos(2. * (fPsi2V0A - fPsi2V0C)));
     fHist2DPsi2V0CCent[iCut]->Fill(fCent, fPsi2V0C);
     fHist2DPsi2V0ACent[iCut]->Fill(fCent, fPsi2V0A);
 
@@ -4110,20 +4126,31 @@ bool AliAnalysisTaskPi0v2Calo::GetVZEROPlane() {
 
   // Quality Assurance (QA) for VZERO if enabled
   if (IsQAVZERO) {
-    for (int i = 0; i < 2; ++i) {
-      // Profiles for V0C (0) and V0A (1)
-      fProfileV0CQxCentGE[fiCut]->Fill(fCent, qxGE[i]);
-      fProfileV0CQyCentGE[fiCut]->Fill(fCent, qyGE[i]);
-      fProfileV0CQxVtxGE[fiCut]->Fill(vertex[2], qxGE[i]);
-      fProfileV0CQyVtxGE[fiCut]->Fill(vertex[2], qyGE[i]);
-      fHist2CalibPsi2V0CCentGE[fiCut]->Fill(fCent, psi2GE[i]);
+    // Profiles for V0C (0)
+    fProfileV0CQxCentGE[fiCut]->Fill(fCent, qxGE[0]);
+    fProfileV0CQyCentGE[fiCut]->Fill(fCent, qyGE[0]);
+    fProfileV0CQxVtxGE[fiCut]->Fill(vertex[2], qxGE[0]);
+    fProfileV0CQyVtxGE[fiCut]->Fill(vertex[2], qyGE[0]);
+    fHist2CalibPsi2V0CCentGE[fiCut]->Fill(fCent, psi2GE[0]);
 
-      fProfileV0CQxCentRC[fiCut]->Fill(fCent, qxRC[i]);
-      fProfileV0CQyCentRC[fiCut]->Fill(fCent, qyRC[i]);
-      fProfileV0CQxVtxRC[fiCut]->Fill(vertex[2], qxRC[i]);
-      fProfileV0CQyVtxRC[fiCut]->Fill(vertex[2], qyRC[i]);
-      fHist2CalibPsi2V0CCentRC[fiCut]->Fill(fCent, psi2RC[i]);
-    }
+    fProfileV0CQxCentRC[fiCut]->Fill(fCent, qxRC[0]);
+    fProfileV0CQyCentRC[fiCut]->Fill(fCent, qyRC[0]);
+    fProfileV0CQxVtxRC[fiCut]->Fill(vertex[2], qxRC[0]);
+    fProfileV0CQyVtxRC[fiCut]->Fill(vertex[2], qyRC[0]);
+    fHist2CalibPsi2V0CCentRC[fiCut]->Fill(fCent, psi2RC[0]);
+
+     // Profiles for V0A (1)
+    fProfileV0AQxCentGE[fiCut]->Fill(fCent, qxGE[1]);
+    fProfileV0AQyCentGE[fiCut]->Fill(fCent, qyGE[1]);
+    fProfileV0AQxVtxGE[fiCut]->Fill(vertex[2], qxGE[1]);
+    fProfileV0AQyVtxGE[fiCut]->Fill(vertex[2], qyGE[1]);
+    fHist2CalibPsi2V0ACentGE[fiCut]->Fill(fCent, psi2GE[1]);
+
+    fProfileV0AQxCentRC[fiCut]->Fill(fCent, qxRC[1]);
+    fProfileV0AQyCentRC[fiCut]->Fill(fCent, qyRC[1]);
+    fProfileV0AQxVtxRC[fiCut]->Fill(vertex[2], qxRC[1]);
+    fProfileV0AQyVtxRC[fiCut]->Fill(vertex[2], qyRC[1]);
+    fHist2CalibPsi2V0ACentRC[fiCut]->Fill(fCent, psi2RC[1]);
   }
 
   // Set Psi2 values for V0C and V0A
