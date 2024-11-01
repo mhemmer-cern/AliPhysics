@@ -4,4 +4,5 @@
 #pragma link off all functions;
 #pragma link C++ class AliAnalysisTaskAO2Dconverter+;
 #pragma link C++ class AliAnalysisTaskHistogram+;
+#pragma link C++ class AliAODRelabelInterface+;
 #endif

@@ -9,6 +9,7 @@
 #pragma link C++ class AliGAKFParticle+;
 #pragma link C++ class AliGAKFVertex+;
 #endif // PWGGAUSEKFPARTICLE
+#pragma link C++ class AliAODRelabelInterface+;
 #pragma link C++ class AliConversionPhotonBase+;
 #pragma link C++ class AliAODConversionParticle+;
 #pragma link C++ class AliAODConversionMother+;
